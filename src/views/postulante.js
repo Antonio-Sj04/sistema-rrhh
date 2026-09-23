@@ -63,6 +63,7 @@ export async function render(el, { id }) {
             { titulo: 'Etapa', render: (po) => badge(po.etapa, ETAPAS.find(([v]) => v === po.etapa)?.[1]) },
             { titulo: 'Calificación', render: (po) => estrellas(po.calificacion) },
             { titulo: 'Fecha', render: (po) => fecha(po.created_at) },
+            { titulo: 'CV enviado', render: (po) => botonArchivo('cvs', po.cv_ruta, 'Ver CV') },
             { titulo: 'Motivo de rechazo', campo: 'motivo_rechazo' },
           ],
           campos: [{ nombre: 'vacante_id', etiqueta: 'Vacante', tipo: 'select', requerido: true, completo: true, opciones: opciones(vacantes, (v) => v.titulo) }],

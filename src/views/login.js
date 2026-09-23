@@ -15,7 +15,8 @@ export function render(el) {
           <li>Reclutamiento: vacantes, CV y antecedentes</li>
         </ul>
       </div>
-      <small>Acceso exclusivo para personal autorizado.</small>
+      <small>Acceso exclusivo para personal autorizado. ¿Buscas empleo?
+        <a href="#/empleos" style="color:#fff;text-decoration:underline">Ver vacantes</a></small>
     </section>
     <section class="auth-panel">
       <div class="auth-caja" id="caja"></div>
@@ -36,7 +37,8 @@ function mostrarLogin(caja) {
         <input id="password" type="password" autocomplete="current-password" required /></div>
       <button class="primario" type="submit">Ingresar</button>
       <button class="enlace" type="button" id="olvide">¿Olvidaste tu contraseña?</button>
-    </form>`;
+    </form>
+    <p class="texto-suave" style="text-align:center;margin-top:28px">¿Buscas empleo? <a href="#/empleos">Ver vacantes</a></p>`;
 
   const form = caja.querySelector('form');
   form.email.focus();

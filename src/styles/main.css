@@ -531,6 +531,57 @@ tfoot td { font-weight: 700; background: var(--superficie-2); border-top: 2px so
   margin-bottom: 16px;
 }
 
+/* ---------- Portal de empleo ---------- */
+.portal { min-height: 100vh; display: flex; flex-direction: column; }
+.portal-cabecera {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 24px;
+  background: var(--superficie);
+  border-bottom: 1px solid var(--borde);
+}
+.portal-marca { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 16px; }
+.portal-marca .marca-logo { color: #fff; }
+.portal-hero {
+  background: linear-gradient(145deg, #1b2a5e, #2f5bea 60%, #5b7fff);
+  color: #fff;
+  padding: 48px 24px;
+  text-align: center;
+}
+.portal-hero h1 { font-size: 30px; }
+.portal-hero p { margin: 8px 0 0; opacity: 0.9; font-size: 16px; }
+.portal-lista {
+  width: 100%;
+  max-width: 880px;
+  margin: -24px auto 0;
+  padding: 0 16px 40px;
+  display: grid;
+  gap: 16px;
+  align-content: start;
+  flex: 1;
+}
+.portal-vacante-cabecera { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+.portal-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.portal-meta span {
+  background: var(--neutro-suave);
+  color: var(--texto-suave);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+.portal-vacante h3 { margin-top: 16px; font-size: 14px; }
+.portal-texto p { margin: 8px 0 0; color: var(--texto-suave); }
+.portal-pie { text-align: center; color: var(--texto-suave); font-size: 12px; padding: 20px 16px; }
+.portal-trampa { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+@media (max-width: 600px) {
+  .portal-hero { padding: 36px 16px; }
+  .portal-hero h1 { font-size: 24px; }
+  .portal-vacante-cabecera .primario { width: 100%; }
+}
+
 /* ---------- Kanban ---------- */
 .kanban {
   display: grid;

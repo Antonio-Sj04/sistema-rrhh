@@ -40,6 +40,7 @@ const COLORES_ESTADO = {
   sin_registro: 'exito', realizada: 'exito',
   pendiente: 'alerta', borrador: 'alerta', pausada: 'alerta', suspendido: 'alerta', programada: 'info',
   calculada: 'info', entrevista: 'info', pruebas: 'info', oferta: 'info', filtro: 'info', aplicado: 'neutro',
+  info: 'info',
   baja: 'peligro', rechazada: 'peligro', rechazado: 'peligro', con_registro: 'peligro', cancelada: 'peligro',
 };
 
@@ -135,7 +136,7 @@ export function campoHTML(c, valor) {
       break;
     case 'checkbox':
       return `<div class="campo campo-check ${c.completo ? 'completo' : ''}">
-        <input type="checkbox" id="${id}" name="${c.nombre}" ${v ? 'checked' : ''} />${lbl}</div>`;
+        <input type="checkbox" id="${id}" name="${c.nombre}" ${v ? 'checked' : ''} ${req} />${lbl}</div>`;
     case 'file':
       control = `<input type="file" id="${id}" name="${c.nombre}" accept="${c.acepta ?? '.pdf,.jpg,.jpeg,.png'}" ${req} />`;
       break;

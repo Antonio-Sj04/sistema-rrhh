@@ -20,7 +20,7 @@ export const CAMPOS_POSTULANTE = [
   { nombre: 'pretension_salarial', etiqueta: 'Pretensión salarial (Q)', tipo: 'number', paso: '0.01', min: 0 },
   {
     nombre: 'fuente', etiqueta: '¿Cómo se enteró de la vacante?', tipo: 'select',
-    opciones: [['referido', 'Referido'], ['bolsa_empleo', 'Bolsa de empleo'], ['redes_sociales', 'Redes sociales'], ['universidad', 'Universidad'], ['otro', 'Otro']],
+    opciones: [['portal_empleo', 'Portal de empleo'], ['referido', 'Referido'], ['bolsa_empleo', 'Bolsa de empleo'], ['redes_sociales', 'Redes sociales'], ['universidad', 'Universidad'], ['otro', 'Otro']],
   },
   { nombre: 'notas', etiqueta: 'Notas internas', tipo: 'textarea' },
   { nombre: 'consentimiento_datos', etiqueta: 'El postulante autorizó el tratamiento de sus datos personales', tipo: 'checkbox', completo: true },

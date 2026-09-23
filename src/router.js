@@ -8,6 +8,8 @@ const GESTION = ['admin', 'rrhh', 'nomina', 'jefe'];
 
 export const RUTAS = [
   { ruta: '/login', vista: () => import('./views/login.js'), publica: true },
+  // Portal de empleo: abierto a cualquiera, con o sin sesión
+  { ruta: '/empleos', vista: () => import('./views/empleos.js'), abierta: true },
   { ruta: '/restablecer', vista: () => import('./views/restablecer.js'), sinLayout: true },
   { ruta: '/', vista: () => import('./views/dashboard.js'), roles: GESTION },
   { ruta: '/mi-portal', vista: () => import('./views/mi-portal.js') },
@@ -53,7 +55,8 @@ async function resolver() {
   const perfil = obtenerPerfil();
 
   if (!destino) return navegar(sesion ? inicioPorRol() : '/login');
-  if (!destino.publica && !sesion) return navegar('/login');
+  if (destino.abierta) destino.sinLayout = true;
+  else if (!destino.publica && !sesion) return navegar('/login');
   if (destino.publica && sesion && perfil) return navegar(inicioPorRol());
   if (!destino.publica && !destino.sinLayout && !perfil) return navegar('/login');
   if (destino.roles && !destino.roles.includes(perfil.rol)) return navegar(inicioPorRol());

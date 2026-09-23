@@ -15,7 +15,10 @@ export async function render(el) {
   el.innerHTML = `
     <div class="encabezado">
       <div><h1>Vacantes</h1><p>Plazas abiertas y su avance en el proceso de selección.</p></div>
-      <div class="acciones">${puedeEditar ? '<button type="button" class="primario" id="nueva">+ Nueva vacante</button>' : ''}</div>
+      <div class="acciones">
+        <a class="boton" href="#/empleos" target="_blank" rel="noopener">Ver portal público ↗</a>
+        ${puedeEditar ? '<button type="button" class="primario" id="nueva">+ Nueva vacante</button>' : ''}
+      </div>
     </div>
     <div class="tarjeta" id="lista">${tabla(
       [
@@ -27,10 +30,12 @@ export async function render(el) {
         { titulo: 'En proceso', render: (v) => v.postulaciones.filter((p) => !['contratado', 'rechazado'].includes(p.etapa)).length, clase: 'numero' },
         { titulo: 'Apertura', render: (v) => fecha(v.fecha_apertura) },
         { titulo: 'Estado', render: (v) => badge(v.estado) },
+        { titulo: 'Portal', render: (v) => (v.publicar ? badge('info', 'Publicada') : badge('neutro', 'Interna')) },
         {
           titulo: '',
           clase: 'derecha',
           render: (v) => `<div class="acciones" style="justify-content:flex-end">
+            ${v.publicar && v.estado === 'abierta' ? `<button type="button" class="pequeno" data-enlace="${v.id}">Copiar enlace</button>` : ''}
             <button type="button" class="pequeno" data-proceso="${v.id}">Ver proceso</button>
             ${puedeEditar ? `<button type="button" class="pequeno" data-editar="${v.id}">Editar</button>` : ''}</div>`,
         },
@@ -50,13 +55,15 @@ export async function render(el) {
     { nombre: 'estado', etiqueta: 'Estado', tipo: 'select', requerido: true, opciones: [['abierta', 'Abierta'], ['pausada', 'Pausada'], ['cerrada', 'Cerrada']] },
     { nombre: 'descripcion', etiqueta: 'Descripción', tipo: 'textarea' },
     { nombre: 'requisitos', etiqueta: 'Requisitos', tipo: 'textarea' },
+    { nombre: 'publicar', etiqueta: 'Publicar en el portal de empleo (visible para cualquier persona)', tipo: 'checkbox', completo: true },
+    { nombre: 'publicar_salario', etiqueta: 'Mostrar el salario en el portal', tipo: 'checkbox', completo: true },
   ];
 
   const editar = (vacante) =>
     abrirFormulario({
       titulo: vacante ? 'Editar vacante' : 'Nueva vacante',
       campos,
-      valores: vacante ?? { plazas: 1, fecha_apertura: hoy(), estado: 'abierta' },
+      valores: vacante ?? { plazas: 1, fecha_apertura: hoy(), estado: 'abierta', publicar: true },
       alGuardar: async (datos) => {
         await ok(vacante ? reclutamiento('vacantes').update(datos).eq('id', vacante.id) : reclutamiento('vacantes').insert(datos));
         toast('Vacante guardada.');
@@ -66,7 +73,14 @@ export async function render(el) {
 
   el.querySelector('#nueva')?.addEventListener('click', () => editar());
   el.querySelector('#lista').addEventListener('click', (e) => {
-    const b = e.target.closest('[data-editar], [data-proceso]');
+    const b = e.target.closest('[data-editar], [data-proceso], [data-enlace]');
+    if (b?.dataset.enlace) {
+      const enlace = `${location.origin}${location.pathname}#/empleos?vacante=${b.dataset.enlace}`;
+      navigator.clipboard.writeText(enlace).then(
+        () => toast('Enlace copiado. Compártelo en redes sociales o bolsas de empleo.'),
+        () => toast(enlace),
+      );
+    }
     if (b?.dataset.editar) editar(vacantes.find((v) => v.id === b.dataset.editar));
     if (b?.dataset.proceso) navegar(`/proceso?vacante=${b.dataset.proceso}`);
   });
