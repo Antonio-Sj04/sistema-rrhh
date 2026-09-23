@@ -51,6 +51,8 @@ Permite a los administradores invitar usuarios desde la app:
 ```bash
 npx supabase login
 npx supabase functions deploy invitar-usuario --project-ref TU_PROJECT_REF
+# Portal de empleo: función pública, valida todo internamente
+npx supabase functions deploy postular --no-verify-jwt --project-ref TU_PROJECT_REF
 ```
 
 ### 4. Ejecutar la aplicación
@@ -73,6 +75,10 @@ En **Vercel**, **Netlify** o **Cloudflare Pages**: comando de build `npm run bui
 - **Nómina:** planilla mensual, Aguinaldo y Bono 14; ajustes por horas extra, comisiones y descuentos; cierre del período; recibo imprimible; exportación a CSV y archivo para el banco
 - **Reclutamiento:** vacantes, banco de postulantes con CV, antecedentes (penales, policíacos, RENAS…), referencias, tablero Kanban de selección, entrevistas y **contratación en un clic** (crea el empleado en la base de la empresa)
 - **Administración:** invitación de usuarios, roles, vínculo usuario-empleado y bitácora de cambios
+- **Liquidación laboral:** al dar de baja calcula indemnización, aguinaldo, Bono 14, vacaciones y salario pendiente, con vista previa e impresión
+- **Gráficas del inicio:** costo de planilla, altas y bajas, personal por departamento y candidatos por etapa
+- **Constancias en PDF:** laboral y de ingresos (con montos en letras), con código de verificación; el empleado las descarga desde su portal
+- **Portal público de empleo** (`#/empleos`): vacantes publicadas y postulación con CV sin crear cuenta, a través de la Edge Function `postular`
 
 ## Nómina (Guatemala)
 
