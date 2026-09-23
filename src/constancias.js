@@ -122,10 +122,16 @@ export async function generarConstancia(emp, tipo, dirigidaA) {
     throw new Error('La constancia de ingresos solo aplica a empleados activos.');
   }
 
+  // Se carga el generador antes de registrar, para no dejar constancias sin PDF
+  let jsPDF;
+  try {
+    ({ jsPDF } = await import('jspdf'));
+  } catch {
+    throw new Error('No se pudo descargar el generador de PDF. Revisa tu conexión y vuelve a intentarlo.');
+  }
   const [registro] = await ok(
     empresa('constancias').insert({ empleado_id: emp.id, tipo, dirigida_a: dirigidaA || null }).select('codigo, created_at'),
   );
-  const { jsPDF } = await import('jspdf');
   const doc = construirPDF(jsPDF, {
     config,
     emp,
