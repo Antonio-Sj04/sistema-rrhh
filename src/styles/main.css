@@ -576,7 +576,8 @@ tfoot td { font-weight: 700; background: var(--superficie-2); border-top: 2px so
 
 /* ---------- Recibo imprimible ---------- */
 .recibo { max-width: 720px; margin: 0 auto; }
-.recibo-cabecera { display: flex; justify-content: space-between; margin-bottom: 16px; }
+.recibo-cabecera { display: flex; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.recibo .rejilla { align-items: start; }
 .recibo table td,
 .recibo table th { padding: 6px 10px; }
 .recibo-total { font-size: 18px; font-weight: 700; text-align: right; margin-top: 12px; }

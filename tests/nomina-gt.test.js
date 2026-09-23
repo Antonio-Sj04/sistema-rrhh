@@ -1,7 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  calcularLiquidacion,
   calcularReciboMensual,
+  ultimoAniversario,
+  vacacionesPendientes,
   calcularReciboPrestacion,
   isrAnual,
   periodoPrestacion,
@@ -58,4 +61,47 @@ test('aguinaldo completo y proporcional', () => {
   });
   assert.equal(parcial.dias_laborados, 183);
   assert.equal(parcial.liquido, 1830);
+});
+
+const monto = (liq, concepto) => liq.ingresos.find((l) => l.concepto === concepto)?.monto ?? 0;
+
+test('despido injustificado incluye indemnización con 1/6 de aguinaldo y Bono 14', () => {
+  const liq = calcularLiquidacion({
+    salarioBase: 6000, fechaIngreso: '2020-07-01', fechaBaja: '2026-06-30', motivo: 'despido_injustificado',
+  });
+  // 6 años con un solo 29 de febrero (2024) = 2191 días; base = 6000 + 1000 + 1000 = 8000
+  assert.equal(liq.dias_laborados, 2191);
+  assert.equal(monto(liq, 'Indemnización'), Math.round(8000 * (2191 / 365) * 100) / 100);
+  // Bono 14: 1 jul 2025 – 30 jun 2026 completo
+  assert.equal(monto(liq, 'Bono 14 proporcional'), 6000);
+  // Aguinaldo: 1 dic 2025 – 30 jun 2026 = 212 días
+  assert.equal(monto(liq, 'Aguinaldo proporcional'), Math.round((6000 * 212 / 365) * 100) / 100);
+});
+
+test('la renuncia no genera indemnización', () => {
+  const liq = calcularLiquidacion({
+    salarioBase: 6000, fechaIngreso: '2020-01-01', fechaBaja: '2026-03-15', motivo: 'renuncia',
+  });
+  assert.equal(monto(liq, 'Indemnización'), 0);
+  assert.ok(liq.total > 0);
+});
+
+test('vacaciones pendientes desde el último aniversario', () => {
+  assert.equal(ultimoAniversario('2020-05-10', '2026-03-01'), '2025-05-10');
+  assert.equal(ultimoAniversario('2020-05-10', '2026-05-10'), '2026-05-10');
+  assert.equal(ultimoAniversario('2026-02-01', '2026-03-01'), '2026-02-01');
+  // 10 may 2025 – 9 may 2026 = 365 días → 15 días, menos 5 usados
+  assert.equal(vacacionesPendientes({ fechaIngreso: '2020-05-10', fechaBaja: '2026-05-09', diasUsados: 5 }), 10);
+});
+
+test('salario pendiente paga bonificación y descuenta IGSS', () => {
+  const liq = calcularLiquidacion({
+    salarioBase: 3000, fechaIngreso: '2025-01-01', fechaBaja: '2026-01-15', motivo: 'renuncia',
+    diasSalarioPendiente: 15, diasVacacionesPendientes: 0, otrosDescuentos: 200,
+  });
+  assert.equal(monto(liq, 'Salario pendiente'), 1500);
+  assert.equal(monto(liq, 'Bonificación incentivo pendiente'), 125);
+  assert.equal(liq.descuentos.find((d) => d.concepto === 'IGSS laboral').monto, 72.45);
+  assert.equal(liq.total_descuentos, 272.45);
+  assert.equal(liq.total, Math.round((liq.total_ingresos - 272.45) * 100) / 100);
 });

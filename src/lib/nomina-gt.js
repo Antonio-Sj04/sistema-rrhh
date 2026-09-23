@@ -12,6 +12,9 @@ export const PARAMETROS_DEFECTO = {
   isr_tramo: 300000,
   isr_tasa1: 0.05,
   isr_tasa2: 0.07,
+  // Parte del aguinaldo y del Bono 14 que se suma al salario para indemnizar
+  // (Decreto 76-78 art. 9 y Decreto 42-92 art. 4: una sexta parte de cada uno)
+  indemnizacion_fraccion_prestaciones: 1 / 6,
 };
 
 const DIAS_MES = 30;
@@ -117,6 +120,131 @@ export function periodoPrestacion(tipo, anio) {
   if (tipo === 'aguinaldo') return { inicio: `${anio - 1}-12-01`, fin: `${anio}-11-30`, pago: `${anio}-12-15` };
   if (tipo === 'bono14') return { inicio: `${anio - 1}-07-01`, fin: `${anio}-06-30`, pago: `${anio}-07-15` };
   throw new Error(`Tipo de prestación desconocido: ${tipo}`);
+}
+
+// ---------------------------------------------------------------------
+// Liquidación laboral
+// ---------------------------------------------------------------------
+export const MOTIVOS_BAJA = [
+  ['renuncia', 'Renuncia'],
+  ['despido_injustificado', 'Despido injustificado'],
+  ['despido_indirecto', 'Despido indirecto'],
+  ['despido_justificado', 'Despido justificado'],
+  ['fin_contrato', 'Fin de contrato a plazo fijo'],
+  ['mutuo_acuerdo', 'Mutuo acuerdo'],
+  ['otro', 'Otro'],
+];
+
+// Código de Trabajo, arts. 78, 79 y 82
+export const MOTIVOS_CON_INDEMNIZACION = ['despido_injustificado', 'despido_indirecto'];
+
+const DIAS_VACACIONES_ANUALES = 15; // Código de Trabajo, art. 130
+const DIAS_ANIO = 365;
+
+const iso = (d) => aFecha(d).toISOString().slice(0, 10);
+const mayor = (a, b) => (aFecha(a) > aFecha(b) ? a : b);
+
+/** Último aniversario de ingreso anterior o igual a la fecha de baja. */
+export function ultimoAniversario(fechaIngreso, fechaBaja) {
+  const ingreso = aFecha(fechaIngreso);
+  const baja = aFecha(fechaBaja);
+  const aniversario = new Date(Date.UTC(baja.getUTCFullYear(), ingreso.getUTCMonth(), ingreso.getUTCDate()));
+  if (aniversario > baja) aniversario.setUTCFullYear(aniversario.getUTCFullYear() - 1);
+  return iso(aniversario < ingreso ? ingreso : aniversario);
+}
+
+/** Días de vacaciones generados desde el último aniversario, menos los ya gozados. */
+export function vacacionesPendientes({ fechaIngreso, fechaBaja, diasUsados = 0 }) {
+  const desde = ultimoAniversario(fechaIngreso, fechaBaja);
+  const generados = (DIAS_VACACIONES_ANUALES * diasEntre(desde, fechaBaja)) / DIAS_ANIO;
+  return Math.max(0, redondear(generados - diasUsados));
+}
+
+/** Aguinaldo o Bono 14 proporcional desde el inicio de su período hasta la baja. */
+function prestacionHastaBaja(salario, fechaIngreso, inicioPeriodo, fechaBaja) {
+  const dias = Math.max(0, diasEntre(mayor(fechaIngreso, inicioPeriodo), fechaBaja));
+  return { dias, monto: redondear((salario * dias) / DIAS_ANIO) };
+}
+
+/**
+ * Liquidación al terminar la relación laboral.
+ * Devuelve ingresos y descuentos detallados, y el total a pagar.
+ */
+export function calcularLiquidacion(
+  {
+    salarioBase,
+    fechaIngreso,
+    fechaBaja,
+    motivo,
+    diasVacacionesPendientes,
+    diasVacacionesUsados = 0,
+    diasSalarioPendiente = 0,
+    otrosIngresos = 0,
+    otrosDescuentos = 0,
+  },
+  parametros,
+) {
+  const p = normalizar(parametros);
+  const s = Number(salarioBase) || 0;
+  const diaSalario = s / DIAS_MES;
+  const diasLaborados = diasEntre(fechaIngreso, fechaBaja);
+  const anios = diasLaborados / DIAS_ANIO;
+  const baja = aFecha(fechaBaja);
+  const y = baja.getUTCFullYear();
+  const m = baja.getUTCMonth() + 1;
+  const ingresos = [];
+  const descuentos = [];
+
+  if (MOTIVOS_CON_INDEMNIZACION.includes(motivo)) {
+    const base = s * (1 + 2 * p.indemnizacion_fraccion_prestaciones);
+    ingresos.push({
+      concepto: 'Indemnización',
+      detalle: `${redondear(anios)} años × ${redondear(base)} (salario + 1/6 de aguinaldo y Bono 14)`,
+      monto: redondear(base * anios),
+    });
+  }
+
+  const aguinaldo = prestacionHastaBaja(s, fechaIngreso, m === 12 ? `${y}-12-01` : `${y - 1}-12-01`, fechaBaja);
+  ingresos.push({ concepto: 'Aguinaldo proporcional', detalle: `${aguinaldo.dias} días`, monto: aguinaldo.monto });
+
+  const bono14 = prestacionHastaBaja(s, fechaIngreso, m >= 7 ? `${y}-07-01` : `${y - 1}-07-01`, fechaBaja);
+  ingresos.push({ concepto: 'Bono 14 proporcional', detalle: `${bono14.dias} días`, monto: bono14.monto });
+
+  const diasVac =
+    diasVacacionesPendientes != null
+      ? Number(diasVacacionesPendientes)
+      : vacacionesPendientes({ fechaIngreso, fechaBaja, diasUsados: diasVacacionesUsados });
+  if (diasVac > 0) {
+    ingresos.push({ concepto: 'Vacaciones no gozadas', detalle: `${diasVac} días`, monto: redondear(diaSalario * diasVac) });
+  }
+
+  const diasPend = Math.min(Math.max(Number(diasSalarioPendiente) || 0, 0), DIAS_MES);
+  if (diasPend > 0) {
+    const salarioPend = redondear(diaSalario * diasPend);
+    ingresos.push({ concepto: 'Salario pendiente', detalle: `${diasPend} días`, monto: salarioPend });
+    ingresos.push({
+      concepto: 'Bonificación incentivo pendiente',
+      detalle: `${diasPend} días`,
+      monto: redondear((p.bonificacion_incentivo / DIAS_MES) * diasPend),
+    });
+    descuentos.push({ concepto: 'IGSS laboral', detalle: 'Sobre salario pendiente', monto: redondear(salarioPend * p.igss_laboral) });
+  }
+
+  if (Number(otrosIngresos) > 0) ingresos.push({ concepto: 'Otros ingresos', detalle: '', monto: redondear(otrosIngresos) });
+  if (Number(otrosDescuentos) > 0) descuentos.push({ concepto: 'Otros descuentos', detalle: 'Anticipos, préstamos, etc.', monto: redondear(otrosDescuentos) });
+
+  const totalIngresos = redondear(ingresos.reduce((t, l) => t + l.monto, 0));
+  const totalDescuentos = redondear(descuentos.reduce((t, l) => t + l.monto, 0));
+  return {
+    dias_laborados: diasLaborados,
+    anios: redondear(anios),
+    dias_vacaciones: diasVac,
+    ingresos,
+    descuentos,
+    total_ingresos: totalIngresos,
+    total_descuentos: totalDescuentos,
+    total: redondear(totalIngresos - totalDescuentos),
+  };
 }
 
 /** Recibo para aguinaldo / Bono 14 (exentos de IGSS e ISR). */

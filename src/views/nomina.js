@@ -49,6 +49,7 @@ export async function render(el) {
         <div><dt>Bonificación incentivo</dt><dd>${moneda(parametros.bonificacion_incentivo)}</dd></div>
         <div><dt>ISR: deducción fija anual</dt><dd>${moneda(parametros.isr_deduccion_fija)}</dd></div>
         <div><dt>ISR: tasas</dt><dd>${pct(parametros.isr_tasa1)} hasta ${moneda(parametros.isr_tramo)}, luego ${pct(parametros.isr_tasa2)}</dd></div>
+        <div><dt>Indemnización: fracción de aguinaldo y Bono 14</dt><dd>${pct(parametros.indemnizacion_fraccion_prestaciones)}</dd></div>
         <div><dt>Salario mínimo de referencia</dt><dd>${parametros.salario_minimo ? moneda(parametros.salario_minimo) : '—'}</dd></div>
       </dl></div>
     </div>`;
@@ -102,6 +103,7 @@ export async function render(el) {
         { nombre: 'isr_tramo', etiqueta: 'ISR: límite del primer tramo (Q)', tipo: 'number', paso: '0.01', requerido: true },
         { nombre: 'isr_tasa1', etiqueta: 'ISR: tasa primer tramo', tipo: 'number', paso: '0.0001', requerido: true },
         { nombre: 'isr_tasa2', etiqueta: 'ISR: tasa excedente', tipo: 'number', paso: '0.0001', requerido: true },
+        { nombre: 'indemnizacion_fraccion_prestaciones', etiqueta: 'Indemnización: fracción de aguinaldo y Bono 14', tipo: 'number', paso: '0.000001', min: 0, max: 1, requerido: true, ayuda: '0.166667 = una sexta parte de cada prestación' },
       ],
       valores: parametros,
       alGuardar: async (datos) => {

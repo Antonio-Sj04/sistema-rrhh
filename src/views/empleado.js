@@ -3,9 +3,10 @@ import { TIPOS_AUSENCIA, camposEmpleado, cargarCatalogos } from '../catalogos.js
 import { recargarVista } from '../router.js';
 import { botonArchivo, sublista } from '../sublista.js';
 import { empresa, ok, subirArchivo, supabase } from '../supabase.js';
+import { abrirBaja, imprimirContenido, liquidacionHTML } from '../liquidacion.js';
 import {
-  abrirFormulario, badge, esc, estrellas, etiqueta, fecha, hoy, iniciales, moneda, montarPestanas,
-  nombreCompleto, porId,
+  abrirFormulario, badge, confirmar, esc, estrellas, etiqueta, fecha, hoy, iniciales, moneda, montarPestanas,
+  mostrarError, nombreCompleto, porId, toast,
 } from '../ui.js';
 
 export async function render(el, { id }) {
@@ -216,7 +217,41 @@ export async function render(el, { id }) {
     });
   }
 
-  montarPestanas(el.querySelector('#pestanas'), pestanas);
+  if (verNomina && emp.estado === 'baja') {
+    pestanas.push({
+      id: 'liquidacion',
+      titulo: 'Liquidación',
+      render: async (p) => {
+        const liq = await ok(empresa('liquidaciones').select('*').eq('empleado_id', id).maybeSingle());
+        if (!liq) {
+          p.innerHTML = `<div class="vacio"><p>Este empleado se dio de baja sin liquidación registrada.</p>
+            ${puedeEditar ? '<button type="button" class="primario" data-calcular>Calcular liquidación</button>' : ''}</div>`;
+          p.querySelector('[data-calcular]')?.addEventListener('click', () => abrirBaja(emp, recargarVista).catch(mostrarError));
+          return;
+        }
+        p.innerHTML = `<div class="tarjeta-titulo"><h3>Liquidación ${liq.pagada ? badge('activo', 'Pagada') : badge('pendiente', 'Pendiente de pago')}</h3>
+            <div class="acciones">
+              ${liq.pagada ? '' : '<button type="button" class="pequeno" data-recalcular>Recalcular</button><button type="button" class="pequeno boton-exito" data-pagada>Marcar como pagada</button>'}
+              <button type="button" class="pequeno primario" data-imprimir>Imprimir</button>
+            </div></div>
+          <div class="tarjeta-cuerpo">${liquidacionHTML(emp, liq)}</div>`;
+        p.querySelector('[data-imprimir]').addEventListener('click', () => imprimirContenido('Liquidación laboral', liquidacionHTML(emp, liq)));
+        p.querySelector('[data-recalcular]')?.addEventListener('click', () => abrirBaja(emp, recargarVista).catch(mostrarError));
+        p.querySelector('[data-pagada]')?.addEventListener('click', async () => {
+          if (!(await confirmar(`¿Confirmas que se pagó la liquidación por ${moneda(liq.total)}?`, { textoAceptar: 'Sí, fue pagada' }))) return;
+          try {
+            await ok(empresa('liquidaciones').update({ pagada: true }).eq('id', liq.id));
+            toast('Liquidación marcada como pagada.');
+            recargarVista();
+          } catch (error) {
+            mostrarError(error);
+          }
+        });
+      },
+    });
+  }
+
+  montarPestanas(el.querySelector('#pestanas'), pestanas, emp.estado === 'baja' && verNomina ? 'liquidacion' : 'datos');
 
   el.querySelector('#editar')?.addEventListener('click', async () => {
     const jefes = await ok(empresa('empleados').select('id, nombres, apellidos').eq('estado', 'activo').neq('id', id).order('apellidos'));
@@ -231,23 +266,5 @@ export async function render(el, { id }) {
     });
   });
 
-  el.querySelector('#baja')?.addEventListener('click', () =>
-    abrirFormulario({
-      titulo: 'Dar de baja al empleado',
-      textoGuardar: 'Confirmar baja',
-      campos: [
-        { nombre: 'fecha_baja', etiqueta: 'Fecha de baja', tipo: 'date', requerido: true },
-        {
-          nombre: 'tipo', etiqueta: 'Tipo de terminación', tipo: 'select', requerido: true,
-          opciones: [['renuncia', 'Renuncia'], ['despido_justificado', 'Despido justificado'], ['despido_injustificado', 'Despido injustificado'], ['fin_contrato', 'Fin de contrato'], ['otro', 'Otro']],
-        },
-        { nombre: 'detalle', etiqueta: 'Detalle', tipo: 'textarea' },
-      ],
-      valores: { fecha_baja: hoy() },
-      alGuardar: async ({ fecha_baja, tipo, detalle }) => {
-        await ok(empresa('empleados').update({ estado: 'baja', fecha_baja, motivo_baja: [etiqueta(tipo), detalle].filter(Boolean).join(': ') }).eq('id', id));
-        recargarVista();
-      },
-    }),
-  );
+  el.querySelector('#baja')?.addEventListener('click', () => abrirBaja(emp, recargarVista).catch(mostrarError));
 }
