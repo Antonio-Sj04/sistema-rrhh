@@ -1,0 +1,104 @@
+import { cerrarSesion, obtenerPerfil } from './auth.js';
+import { esc, etiqueta } from './ui.js';
+
+const ICONOS = {
+  inicio: '<path d="M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>',
+  portal: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>',
+  empleados: '<circle cx="9" cy="8" r="3.5"/><path d="M2 20c0-3.5 3-5.5 7-5.5s7 2 7 5.5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M22 20c0-3-2-4.8-5-5.3"/>',
+  organizacion: '<rect x="9" y="2" width="6" height="5" rx="1"/><rect x="2" y="17" width="6" height="5" rx="1"/><rect x="16" y="17" width="6" height="5" rx="1"/><path d="M12 7v5M5 17v-5h14v5"/>',
+  ausencias: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+  nomina: '<rect x="2" y="6" width="20" height="13" rx="2"/><circle cx="12" cy="12.5" r="2.5"/><path d="M6 10v5M18 10v5"/>',
+  vacantes: '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+  postulantes: '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/>',
+  proceso: '<rect x="3" y="3" width="5" height="18" rx="1"/><rect x="10" y="3" width="5" height="12" rx="1"/><rect x="17" y="3" width="4" height="7" rx="1"/>',
+  usuarios: '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+  auditoria: '<path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/>',
+};
+
+const icono = (n) =>
+  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONOS[n]}</svg>`;
+
+const MENU = [
+  { seccion: 'General' },
+  { ruta: '/', texto: 'Inicio', icono: 'inicio', roles: ['admin', 'rrhh', 'nomina', 'jefe'] },
+  { ruta: '/mi-portal', texto: 'Mi portal', icono: 'portal', requiereEmpleado: true },
+  { seccion: 'Empresa' },
+  { ruta: '/empleados', texto: 'Empleados', icono: 'empleados', roles: ['admin', 'rrhh', 'nomina', 'jefe'] },
+  { ruta: '/organizacion', texto: 'Organización', icono: 'organizacion', roles: ['admin', 'rrhh'] },
+  { ruta: '/ausencias', texto: 'Vacaciones y permisos', icono: 'ausencias', roles: ['admin', 'rrhh', 'nomina', 'jefe'] },
+  { ruta: '/nomina', texto: 'Nómina', icono: 'nomina', roles: ['admin', 'rrhh', 'nomina'] },
+  { seccion: 'Reclutamiento' },
+  { ruta: '/vacantes', texto: 'Vacantes', icono: 'vacantes', roles: ['admin', 'rrhh', 'jefe'] },
+  { ruta: '/postulantes', texto: 'Postulantes', icono: 'postulantes', roles: ['admin', 'rrhh', 'jefe'] },
+  { ruta: '/proceso', texto: 'Proceso de selección', icono: 'proceso', roles: ['admin', 'rrhh', 'jefe'] },
+  { seccion: 'Administración' },
+  { ruta: '/usuarios', texto: 'Usuarios y roles', icono: 'usuarios', roles: ['admin'] },
+  { ruta: '/auditoria', texto: 'Bitácora', icono: 'auditoria', roles: ['admin'] },
+];
+
+function menuVisible(perfil) {
+  const items = MENU.filter(
+    (m) =>
+      m.seccion ||
+      ((!m.roles || m.roles.includes(perfil.rol)) && (!m.requiereEmpleado || perfil.empleado_id)),
+  );
+  // Quita secciones que quedaron vacías
+  return items.filter((m, i) => !m.seccion || (items[i + 1] && !items[i + 1].seccion));
+}
+
+let shell = null;
+
+/** Monta la estructura (menú lateral + contenido) y devuelve el contenedor de la vista. */
+export function montarLayout(app) {
+  const perfil = obtenerPerfil();
+  if (shell && app.contains(shell) && shell.dataset.usuario === perfil.id) {
+    shell.classList.remove('menu-abierto');
+    return shell.querySelector('.contenido');
+  }
+
+  const enlaces = menuVisible(perfil)
+    .map((m) =>
+      m.seccion
+        ? `<div class="menu-seccion">${m.seccion}</div>`
+        : `<a href="#${m.ruta}" data-ruta="${m.ruta}">${icono(m.icono)}<span>${m.texto}</span></a>`,
+    )
+    .join('');
+
+  app.innerHTML = `<div class="shell" data-usuario="${esc(perfil.id)}">
+    <aside class="lateral">
+      <div class="marca"><span class="marca-logo">RH</span> Sistema RRHH</div>
+      <nav class="menu">${enlaces}</nav>
+      <div class="lateral-pie">
+        <div class="usuario-nombre">${esc(perfil.nombre ?? perfil.email)}</div>
+        <div class="usuario-rol">${esc(etiqueta(perfil.rol))}</div>
+        <button type="button" id="btn-salir">Cerrar sesión</button>
+      </div>
+    </aside>
+    <div class="principal">
+      <header class="barra-movil">
+        <button type="button" id="btn-menu" aria-label="Abrir menú">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+        </button>
+        Sistema RRHH
+      </header>
+      <main class="contenido"></main>
+    </div>
+  </div>`;
+
+  shell = app.querySelector('.shell');
+  shell.querySelector('#btn-salir').addEventListener('click', async () => {
+    await cerrarSesion();
+    location.hash = '#/login';
+  });
+  shell.querySelector('#btn-menu').addEventListener('click', (e) => {
+    e.stopPropagation();
+    shell.classList.toggle('menu-abierto');
+  });
+  shell.querySelector('.principal').addEventListener('click', () => shell.classList.remove('menu-abierto'));
+  return shell.querySelector('.contenido');
+}
+
+export function marcarActivo(camino) {
+  const base = `/${camino.split('/')[1] ?? ''}`;
+  document.querySelectorAll('.menu a').forEach((a) => a.classList.toggle('activo', a.dataset.ruta === base));
+}
