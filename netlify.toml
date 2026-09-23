@@ -1,0 +1,9 @@
+# Netlify compila el proyecto en cada push a main.
+# Las variables VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY se definen en
+# Project configuration → Environment variables (no se suben al repositorio).
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
