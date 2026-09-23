@@ -6,7 +6,7 @@ export function render(el) {
   el.innerHTML = `<div class="auth-panel" style="min-height:100vh">
     <div class="auth-caja tarjeta tarjeta-cuerpo">
       <h1>Crear nueva contraseña</h1>
-      <p class="texto-suave">Usa al menos 8 caracteres, combinando letras y números.</p>
+      <p class="texto-suave">Mínimo 8 caracteres, con al menos una mayúscula, una minúscula y un número.</p>
       <form>
         <div id="mensaje"></div>
         <div class="campo"><label for="p1">Nueva contraseña</label>
@@ -21,7 +21,12 @@ export function render(el) {
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const mensaje = el.querySelector('#mensaje');
-    if (form.p1.value !== form.p2.value) {
+    const clave = form.p1.value;
+    if (clave.length < 8 || !/[a-z]/.test(clave) || !/[A-Z]/.test(clave) || !/\d/.test(clave)) {
+      mensaje.innerHTML = '<div class="error-formulario">La contraseña debe tener mínimo 8 caracteres, con al menos una mayúscula, una minúscula y un número.</div>';
+      return;
+    }
+    if (clave !== form.p2.value) {
       mensaje.innerHTML = '<div class="error-formulario">Las contraseñas no coinciden.</div>';
       return;
     }

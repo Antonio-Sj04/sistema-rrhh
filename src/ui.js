@@ -73,7 +73,8 @@ const MENSAJES = [
   [/violates check constraint/i, 'Algún dato no tiene un valor válido.'],
   [/row-level security|permission denied/i, 'No tienes permiso para realizar esta acción.'],
   [/Failed to fetch/i, 'No hay conexión con el servidor.'],
-  [/Password should be/i, 'La contraseña debe tener al menos 6 caracteres.'],
+  [/Password should (be|contain)|weak password/i, 'La contraseña debe tener mínimo 8 caracteres, con al menos una mayúscula, una minúscula y un número.'],
+  [/should be different from the old/i, 'La nueva contraseña debe ser distinta de la anterior.'],
 ];
 
 export function mensajeError(error) {
