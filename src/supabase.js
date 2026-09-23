@@ -5,7 +5,37 @@ const clave = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 export const configurado = Boolean(url && clave);
 
-export const supabase = configurado ? createClient(url, clave) : null;
+// "Mantener sesión iniciada": con la opción activa la sesión se guarda en
+// localStorage (sobrevive al cerrar el navegador); sin ella, en sessionStorage
+// (se pierde al cerrar el navegador y hay que volver a iniciar sesión).
+const CLAVE_RECORDAR = 'rrhh:recordar-sesion';
+
+function seguro(fn, alternativa = null) {
+  try {
+    return fn();
+  } catch {
+    return alternativa;
+  }
+}
+
+export const recordarSesion = () => seguro(() => localStorage.getItem(CLAVE_RECORDAR) === '1', false);
+
+export function fijarRecordarSesion(recordar) {
+  seguro(() => (recordar ? localStorage.setItem(CLAVE_RECORDAR, '1') : localStorage.removeItem(CLAVE_RECORDAR)));
+}
+
+const almacenSesion = {
+  getItem: (k) => seguro(() => (recordarSesion() ? localStorage : sessionStorage).getItem(k)),
+  setItem: (k, v) => seguro(() => (recordarSesion() ? localStorage : sessionStorage).setItem(k, v)),
+  removeItem: (k) => {
+    seguro(() => localStorage.removeItem(k));
+    seguro(() => sessionStorage.removeItem(k));
+  },
+};
+
+export const supabase = configurado
+  ? createClient(url, clave, { auth: { storage: almacenSesion, persistSession: true, autoRefreshToken: true } })
+  : null;
 
 /** Tabla del esquema "empresa" (datos internos). */
 export const empresa = (tabla) => supabase.schema('empresa').from(tabla);

@@ -1,4 +1,4 @@
-import { supabase } from './supabase.js';
+import { fijarRecordarSesion, supabase } from './supabase.js';
 
 let sesion = null;
 let perfil = null;
@@ -44,15 +44,24 @@ export async function iniciarAuth() {
   });
 }
 
-export async function iniciarSesion(email, password) {
+export async function iniciarSesion(email, password, recordar = false) {
+  // Se decide dónde guardar la sesión antes de crearla
+  fijarRecordarSesion(recordar);
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) throw error;
   sesion = data.session;
   await cargarPerfil();
 }
 
-export async function cerrarSesion() {
-  await supabase.auth.signOut();
+/**
+ * Cierra la sesión. Con todosLosDispositivos invalida también las sesiones
+ * abiertas en otros equipos (dejan de funcionar al renovar su token, ≤ 1 hora).
+ */
+export async function cerrarSesion(todosLosDispositivos = false) {
+  const { error } = await supabase.auth.signOut({ scope: todosLosDispositivos ? 'global' : 'local' });
+  // Si el servidor no responde, la sesión local se borra de todos modos
+  if (error) await supabase.auth.signOut({ scope: 'local' });
+  fijarRecordarSesion(false);
   sesion = null;
   perfil = null;
 }

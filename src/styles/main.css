@@ -181,6 +181,15 @@ h3 { font-size: 15px; font-weight: 600; }
   border: none;
 }
 .lateral-pie button:hover { background: rgba(255, 255, 255, 0.12); color: #fff; }
+.lateral-pie .salir-todos {
+  margin-top: 6px;
+  background: none;
+  padding: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7699;
+}
+.lateral-pie .salir-todos:hover { background: none; color: #fff; text-decoration: underline; }
 
 .principal {
   min-width: 0;
@@ -202,6 +211,14 @@ h3 { font-size: 15px; font-weight: 600; }
   color: #fff;
   padding: 4px;
 }
+.barra-movil-titulo { flex: 1; }
+.barra-movil .barra-movil-salir {
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-size: 13px;
+}
+.barra-movil .barra-movil-salir:hover { background: rgba(255, 255, 255, 0.1); }
 .contenido {
   padding: 28px 32px 48px;
   max-width: 1400px;

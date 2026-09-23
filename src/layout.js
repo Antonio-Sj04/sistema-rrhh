@@ -1,5 +1,5 @@
 import { cerrarSesion, obtenerPerfil } from './auth.js';
-import { esc, etiqueta } from './ui.js';
+import { confirmar, esc, etiqueta, toast } from './ui.js';
 
 const ICONOS = {
   inicio: '<path d="M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>',
@@ -71,7 +71,8 @@ export function montarLayout(app) {
       <div class="lateral-pie">
         <div class="usuario-nombre">${esc(perfil.nombre ?? perfil.email)}</div>
         <div class="usuario-rol">${esc(etiqueta(perfil.rol))}</div>
-        <button type="button" id="btn-salir">Cerrar sesión</button>
+        <button type="button" data-salir>Cerrar sesión</button>
+        <button type="button" class="salir-todos" data-salir-todos>Cerrar en todos mis dispositivos</button>
       </div>
     </aside>
     <div class="principal">
@@ -79,17 +80,25 @@ export function montarLayout(app) {
         <button type="button" id="btn-menu" aria-label="Abrir menú">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
         </button>
-        Sistema RRHH
+        <span class="barra-movil-titulo">Sistema RRHH</span>
+        <button type="button" class="barra-movil-salir" data-salir aria-label="Cerrar sesión">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+          Salir
+        </button>
       </header>
       <main class="contenido"></main>
     </div>
   </div>`;
 
   shell = app.querySelector('.shell');
-  shell.querySelector('#btn-salir').addEventListener('click', async () => {
-    await cerrarSesion();
+  const salir = async (todos) => {
+    if (todos && !(await confirmar('Se cerrará tu sesión aquí y en tus otros dispositivos (computadora, teléfono). En los otros puede tardar hasta una hora en surtir efecto. ¿Continuar?', { textoAceptar: 'Cerrar en todos' }))) return;
+    await cerrarSesion(todos);
+    toast(todos ? 'Sesión cerrada en todos tus dispositivos.' : 'Sesión cerrada.');
     location.hash = '#/login';
-  });
+  };
+  shell.querySelectorAll('[data-salir]').forEach((b) => b.addEventListener('click', () => salir(false)));
+  shell.querySelector('[data-salir-todos]').addEventListener('click', () => salir(true));
   shell.querySelector('#btn-menu').addEventListener('click', (e) => {
     e.stopPropagation();
     shell.classList.toggle('menu-abierto');

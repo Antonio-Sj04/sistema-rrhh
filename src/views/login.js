@@ -35,6 +35,10 @@ function mostrarLogin(caja) {
         <input id="email" type="email" autocomplete="username" required /></div>
       <div class="campo"><label for="password">Contraseña</label>
         <input id="password" type="password" autocomplete="current-password" required /></div>
+      <div class="campo campo-check">
+        <input id="recordar" type="checkbox" />
+        <label for="recordar">Mantener sesión iniciada <span class="texto-suave">(solo en dispositivos personales)</span></label>
+      </div>
       <button class="primario" type="submit">Ingresar</button>
       <button class="enlace" type="button" id="olvide">¿Olvidaste tu contraseña?</button>
     </form>
@@ -50,7 +54,7 @@ function mostrarLogin(caja) {
     boton.disabled = true;
     boton.textContent = 'Ingresando…';
     try {
-      await iniciarSesion(form.email.value.trim(), form.password.value);
+      await iniciarSesion(form.email.value.trim(), form.password.value, form.recordar.checked);
       navegar(inicioPorRol());
     } catch (error) {
       caja.querySelector('#mensaje').innerHTML = `<div class="error-formulario">${esc(mensajeError(error))}</div>`;
