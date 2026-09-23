@@ -1,6 +1,7 @@
 // Autoservicio del empleado: sus datos, recibos y solicitudes de ausencia.
 import { obtenerPerfil } from '../auth.js';
 import { TIPOS_AUSENCIA } from '../catalogos.js';
+import { TIPOS_CONSTANCIA, generarConstancia } from '../constancias.js';
 import { sublista } from '../sublista.js';
 import { empresa, ok } from '../supabase.js';
 import { badge, esc, estrellas, etiqueta, fecha, iniciales, moneda, montarPestanas, nombreCompleto } from '../ui.js';
@@ -77,6 +78,30 @@ export async function render(el) {
               const r = b && filas.find((x) => x.id === b.dataset.ver);
               if (r) mostrarRecibo(r.periodo, r);
             }),
+        }),
+    },
+    {
+      id: 'constancias',
+      titulo: 'Constancias',
+      render: (p) =>
+        sublista(p, {
+          titulo: 'Mis constancias',
+          textoNuevo: 'Nueva constancia',
+          puedeEditar: true,
+          cargar: () => ok(empresa('constancias').select('*').eq('empleado_id', id).order('created_at', { ascending: false })),
+          columnas: [
+            { titulo: 'Fecha', render: (c) => fecha(c.created_at, true) },
+            { titulo: 'Tipo', render: (c) => esc(TIPOS_CONSTANCIA.find(([t]) => t === c.tipo)?.[1]) },
+            { titulo: 'Dirigida a', render: (c) => esc(c.dirigida_a ?? 'A quien interese') },
+            { titulo: 'Código', render: (c) => `<code>${esc(c.codigo)}</code>` },
+          ],
+          campos: [
+            { nombre: 'tipo', etiqueta: 'Tipo de constancia', tipo: 'select', requerido: true, completo: true, opciones: TIPOS_CONSTANCIA },
+            { nombre: 'dirigida_a', etiqueta: 'Dirigida a', completo: true, placeholder: 'A quien interese', ayuda: 'Ej.: Banco Industrial, Embajada de…' },
+          ],
+          valores: { tipo: 'laboral' },
+          guardar: ({ tipo, dirigida_a }) => generarConstancia(emp, tipo, dirigida_a),
+          vacio: 'Genera una constancia laboral o de ingresos; se descargará en PDF.',
         }),
     },
     {

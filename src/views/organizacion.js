@@ -3,10 +3,11 @@ import { empresa, ok } from '../supabase.js';
 import { abrirFormulario, confirmar, esc, moneda, mostrarError, nombreCompleto, opciones, porId, tabla, toast } from '../ui.js';
 
 export async function render(el) {
-  const [{ departamentos, puestos }, empleados, conteo] = await Promise.all([
+  const [{ departamentos, puestos }, empleados, conteo, datosEmpresa] = await Promise.all([
     cargarCatalogos(),
     ok(empresa('empleados').select('id, nombres, apellidos, departamento_id').eq('estado', 'activo').order('apellidos')),
     ok(empresa('empleados').select('departamento_id').eq('estado', 'activo')),
+    ok(empresa('configuracion').select('*').eq('id', 1).single()),
   ]);
   const deptos = porId(departamentos);
   const emps = porId(empleados);
@@ -17,7 +18,22 @@ export async function render(el) {
     <button type="button" class="pequeno peligro" data-eliminar="${tipo}:${id}">Eliminar</button></div>`;
 
   el.innerHTML = `
-    <div class="encabezado"><div><h1>Organización</h1><p>Departamentos, jefaturas y catálogo de puestos.</p></div></div>
+    <div class="encabezado"><div><h1>Organización</h1><p>Datos de la empresa, departamentos, jefaturas y catálogo de puestos.</p></div></div>
+    <div class="tarjeta" style="margin-bottom:16px">
+      <div class="tarjeta-titulo"><div><h2>Datos de la empresa</h2>
+        <div class="texto-suave">Aparecen en el encabezado y la firma de las constancias</div></div>
+        <button type="button" class="pequeno primario" id="editar-empresa">Editar</button></div>
+      <div class="tarjeta-cuerpo">${datosEmpresa.nombre
+        ? `<dl class="datos">
+            <div><dt>Nombre</dt><dd>${esc(datosEmpresa.nombre)}</dd></div>
+            <div><dt>NIT</dt><dd>${esc(datosEmpresa.nit ?? '—')}</dd></div>
+            <div><dt>Dirección</dt><dd>${esc(datosEmpresa.direccion ?? '—')}</dd></div>
+            <div><dt>Teléfono / correo</dt><dd>${esc([datosEmpresa.telefono, datosEmpresa.correo].filter(Boolean).join(' · ') || '—')}</dd></div>
+            <div><dt>Ciudad</dt><dd>${esc(datosEmpresa.ciudad)}</dd></div>
+            <div><dt>Firma las constancias</dt><dd>${esc([datosEmpresa.firmante_nombre, datosEmpresa.firmante_cargo].filter(Boolean).join(' · ') || '—')}</dd></div>
+          </dl>`
+        : '<div class="aviso" style="margin:0">Completa los datos de la empresa para poder emitir constancias.</div>'}</div>
+    </div>
     <div class="rejilla rejilla-2">
       <div class="tarjeta">
         <div class="tarjeta-titulo"><h2>Departamentos</h2><button type="button" class="pequeno primario" id="nuevo-depto">+ Departamento</button></div>
@@ -80,6 +96,27 @@ export async function render(el) {
     });
   }
 
+  el.querySelector('#editar-empresa').addEventListener('click', () =>
+    abrirFormulario({
+      titulo: 'Datos de la empresa',
+      campos: [
+        { nombre: 'nombre', etiqueta: 'Nombre o razón social', requerido: true, completo: true },
+        { nombre: 'nit', etiqueta: 'NIT' },
+        { nombre: 'ciudad', etiqueta: 'Ciudad', requerido: true },
+        { nombre: 'direccion', etiqueta: 'Dirección', completo: true },
+        { nombre: 'telefono', etiqueta: 'Teléfono', tipo: 'tel' },
+        { nombre: 'correo', etiqueta: 'Correo', tipo: 'email' },
+        { nombre: 'firmante_nombre', etiqueta: 'Nombre de quien firma', placeholder: 'Ej.: Licda. María López' },
+        { nombre: 'firmante_cargo', etiqueta: 'Cargo de quien firma', placeholder: 'Ej.: Gerente de Recursos Humanos' },
+      ],
+      valores: datosEmpresa,
+      alGuardar: async (datos) => {
+        await ok(empresa('configuracion').update({ ...datos, updated_at: new Date().toISOString() }).eq('id', 1));
+        toast('Datos de la empresa guardados.');
+        recargar();
+      },
+    }),
+  );
   el.querySelector('#nuevo-depto').addEventListener('click', () => editar('depto'));
   el.querySelector('#nuevo-puesto').addEventListener('click', () => editar('puesto'));
   el.querySelector('.rejilla').addEventListener('click', async (e) => {

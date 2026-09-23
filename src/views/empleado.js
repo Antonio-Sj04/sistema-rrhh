@@ -3,6 +3,7 @@ import { TIPOS_AUSENCIA, camposEmpleado, cargarCatalogos } from '../catalogos.js
 import { recargarVista } from '../router.js';
 import { botonArchivo, sublista } from '../sublista.js';
 import { empresa, ok, subirArchivo, supabase } from '../supabase.js';
+import { TIPOS_CONSTANCIA, abrirConstancia } from '../constancias.js';
 import { abrirBaja, imprimirContenido, liquidacionHTML } from '../liquidacion.js';
 import {
   abrirFormulario, badge, confirmar, esc, estrellas, etiqueta, fecha, hoy, iniciales, moneda, montarPestanas,
@@ -31,6 +32,7 @@ export async function render(el, { id }) {
         <p>${esc(emp.codigo)} · ${esc(puestos[emp.puesto_id]?.nombre ?? 'Sin puesto')} · ${badge(emp.estado)}</p></div>
       </div>
       <div class="acciones">
+        ${verNomina ? '<button type="button" id="constancia">Constancia PDF</button>' : ''}
         ${puedeEditar ? '<button type="button" id="editar">Editar datos</button>' : ''}
         ${puedeEditar && emp.estado !== 'baja' ? '<button type="button" class="peligro" id="baja">Dar de baja</button>' : ''}
       </div>
@@ -217,6 +219,25 @@ export async function render(el, { id }) {
     });
   }
 
+  if (verNomina) {
+    pestanas.push({
+      id: 'constancias',
+      titulo: 'Constancias',
+      render: (p) =>
+        sublista(p, {
+          titulo: 'Constancias emitidas',
+          cargar: () => ok(empresa('constancias').select('*').eq('empleado_id', id).order('created_at', { ascending: false })),
+          columnas: [
+            { titulo: 'Fecha', render: (c) => fecha(c.created_at, true) },
+            { titulo: 'Tipo', render: (c) => esc(TIPOS_CONSTANCIA.find(([t]) => t === c.tipo)?.[1]) },
+            { titulo: 'Dirigida a', render: (c) => esc(c.dirigida_a ?? 'A quien interese') },
+            { titulo: 'Código', render: (c) => `<code>${esc(c.codigo)}</code>` },
+          ],
+          vacio: 'Aún no se han emitido constancias.',
+        }),
+    });
+  }
+
   if (verNomina && emp.estado === 'baja') {
     pestanas.push({
       id: 'liquidacion',
@@ -266,5 +287,6 @@ export async function render(el, { id }) {
     });
   });
 
+  el.querySelector('#constancia')?.addEventListener('click', () => abrirConstancia(emp));
   el.querySelector('#baja')?.addEventListener('click', () => abrirBaja(emp, recargarVista).catch(mostrarError));
 }
