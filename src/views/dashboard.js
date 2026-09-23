@@ -1,37 +1,68 @@
 import { obtenerPerfil, tieneRol } from '../auth.js';
+import { ETAPAS } from '../catalogos.js';
+import { tarjetaGrafica } from '../graficas.js';
 import { empresa, ok, reclutamiento } from '../supabase.js';
-import { badge, esc, fecha, moneda, nombreCompleto, tabla } from '../ui.js';
+import { badge, esc, fecha, moneda, nombreCompleto, porId, tabla } from '../ui.js';
 
 const contar = (consulta) => ok(consulta).catch(() => null);
+const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const monedaCorta = (n) => `Q${new Intl.NumberFormat('es-GT', { maximumFractionDigits: 0 }).format(n)}`;
+const entero = (n) => new Intl.NumberFormat('es-GT').format(n);
+
+/** Últimos 12 meses como claves 'AAAA-MM' y etiquetas 'sep 26'. */
+function ultimosMeses(n = 12) {
+  const hoy = new Date();
+  return Array.from({ length: n }, (_, i) => {
+    const d = new Date(hoy.getFullYear(), hoy.getMonth() - (n - 1 - i), 1);
+    return {
+      clave: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
+      etiqueta: `${MESES[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`,
+    };
+  });
+}
 
 export async function render(el) {
   const perfil = obtenerPerfil();
   const verReclutamiento = tieneRol('admin', 'rrhh', 'jefe');
   const verNomina = tieneRol('admin', 'rrhh', 'nomina');
   const inicioMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+  const meses = ultimosMeses();
 
-  const [activos, pendientes, vacantes, postulantesMes, ultimaNomina, solicitudes] = await Promise.all([
-    contar(empresa('empleados').select('id', { count: 'exact', head: true }).eq('estado', 'activo')),
-    contar(empresa('ausencias').select('id', { count: 'exact', head: true }).eq('estado', 'pendiente')),
-    verReclutamiento
-      ? contar(reclutamiento('vacantes').select('id', { count: 'exact', head: true }).eq('estado', 'abierta'))
-      : null,
-    verReclutamiento
-      ? contar(reclutamiento('postulaciones').select('id', { count: 'exact', head: true }).gte('created_at', inicioMes))
-      : null,
-    verNomina
-      ? ok(empresa('periodos_nomina').select('id, nombre, estado, recibos_nomina(liquido)').order('fecha_fin', { ascending: false }).limit(1)).then((r) => r[0])
-      : null,
-    ok(
-      empresa('ausencias')
-        .select('id, tipo, fecha_inicio, fecha_fin, dias, estado, empleado:empleados(nombres, apellidos)')
-        .eq('estado', 'pendiente')
-        .order('created_at')
-        .limit(6),
-    ),
-  ]);
+  const [activos, pendientes, vacantes, postulantesMes, periodos, solicitudes, empleados, departamentos, postulaciones] =
+    await Promise.all([
+      contar(empresa('empleados').select('id', { count: 'exact', head: true }).eq('estado', 'activo')),
+      contar(empresa('ausencias').select('id', { count: 'exact', head: true }).eq('estado', 'pendiente')),
+      verReclutamiento
+        ? contar(reclutamiento('vacantes').select('id', { count: 'exact', head: true }).eq('estado', 'abierta'))
+        : null,
+      verReclutamiento
+        ? contar(reclutamiento('postulaciones').select('id', { count: 'exact', head: true }).gte('created_at', inicioMes))
+        : null,
+      verNomina
+        ? ok(
+            empresa('periodos_nomina')
+              .select('id, nombre, tipo, fecha_inicio, recibos_nomina(liquido, total_ingresos, igss_patronal, irtra, intecap)')
+              .neq('estado', 'borrador')
+              .order('fecha_inicio', { ascending: false })
+              .limit(24),
+          )
+        : [],
+      ok(
+        empresa('ausencias')
+          .select('id, tipo, fecha_inicio, fecha_fin, dias, estado, empleado:empleados(nombres, apellidos)')
+          .eq('estado', 'pendiente')
+          .order('created_at')
+          .limit(6),
+      ),
+      ok(empresa('empleados').select('departamento_id, estado, fecha_ingreso, fecha_baja')),
+      ok(empresa('departamentos').select('id, nombre')),
+      verReclutamiento
+        ? ok(reclutamiento('postulaciones').select('etapa, vacante:vacantes(estado)'))
+        : [],
+    ]);
 
-  const totalNomina = ultimaNomina?.recibos_nomina.reduce((s, r) => s + Number(r.liquido), 0);
+  const suma = (p, campos) => p.recibos_nomina.reduce((s, r) => s + campos.reduce((t, c) => t + Number(r[c]), 0), 0);
+  const ultimaNomina = periodos.find((p) => p.tipo === 'mensual') ?? periodos[0];
 
   const kpi = (etiqueta, valor, nota = '', href = '') =>
     valor == null
@@ -51,7 +82,13 @@ export async function render(el) {
       ${kpi('Solicitudes pendientes', pendientes, 'Vacaciones y permisos', '#/ausencias')}
       ${kpi('Vacantes abiertas', vacantes, 'En reclutamiento', '#/vacantes')}
       ${kpi('Postulaciones del mes', postulantesMes, 'Nuevos candidatos', '#/proceso')}
-      ${ultimaNomina ? kpi('Última nómina', moneda(totalNomina), ultimaNomina.nombre, `#/nomina/${ultimaNomina.id}`) : ''}
+      ${ultimaNomina ? kpi('Última nómina', moneda(suma(ultimaNomina, ['liquido'])), ultimaNomina.nombre, `#/nomina/${ultimaNomina.id}`) : ''}
+    </div>
+    <div class="rejilla rejilla-graficas">
+      ${verNomina ? '<div class="tarjeta" id="g-planilla"></div>' : ''}
+      <div class="tarjeta" id="g-rotacion"></div>
+      <div class="tarjeta" id="g-departamentos"></div>
+      ${verReclutamiento ? '<div class="tarjeta" id="g-reclutamiento"></div>' : ''}
     </div>
     <div class="tarjeta">
       <div class="tarjeta-titulo"><h2>Solicitudes por aprobar</h2><a href="#/ausencias">Ver todas</a></div>
@@ -67,4 +104,67 @@ export async function render(el) {
         { vacio: 'No hay solicitudes pendientes.' },
       )}
     </div>`;
+
+  // 1. Costo de planilla mensual (líquido + cuotas patronales)
+  if (verNomina) {
+    const mensuales = periodos.filter((p) => p.tipo === 'mensual').slice(0, 12).reverse();
+    tarjetaGrafica(el.querySelector('#g-planilla'), {
+      tipo: 'columnas',
+      titulo: 'Costo de planilla por mes',
+      subtitulo: 'Ingresos del personal + cuotas patronales (IGSS, IRTRA, INTECAP)',
+      categorias: mensuales.map((p) => {
+        const [a, m] = p.fecha_inicio.split('-');
+        return `${MESES[Number(m) - 1]} ${a.slice(2)}`;
+      }),
+      valores: mensuales.map((p) => Math.round(suma(p, ['total_ingresos', 'igss_patronal', 'irtra', 'intecap']))),
+      formato: monedaCorta,
+      vacio: 'Aparecerá cuando calcules tu primera nómina mensual.',
+    });
+  }
+
+  // 2. Rotación: altas y bajas de los últimos 12 meses
+  const porMes = (campo) => meses.map((m) => empleados.filter((e) => e[campo]?.startsWith(m.clave)).length);
+  tarjetaGrafica(el.querySelector('#g-rotacion'), {
+    tipo: 'columnas',
+    titulo: 'Altas y bajas de personal',
+    subtitulo: 'Últimos 12 meses',
+    categorias: meses.map((m) => m.etiqueta),
+    series: [
+      { nombre: 'Altas', valores: porMes('fecha_ingreso'), color: '--viz-serie-1' },
+      { nombre: 'Bajas', valores: porMes('fecha_baja'), color: '--viz-serie-2' },
+    ],
+    formato: entero,
+    vacio: 'Sin ingresos ni bajas en los últimos 12 meses.',
+  });
+
+  // 3. Personal activo por departamento
+  const deptos = porId(departamentos);
+  const conteo = {};
+  for (const e of empleados.filter((x) => x.estado === 'activo')) {
+    const nombre = deptos[e.departamento_id]?.nombre ?? 'Sin departamento';
+    conteo[nombre] = (conteo[nombre] ?? 0) + 1;
+  }
+  const ordenDeptos = Object.entries(conteo).sort((a, b) => b[1] - a[1]);
+  tarjetaGrafica(el.querySelector('#g-departamentos'), {
+    tipo: 'barras',
+    titulo: 'Personal activo por departamento',
+    categorias: ordenDeptos.map(([n]) => n),
+    valores: ordenDeptos.map(([, v]) => v),
+    formato: entero,
+    vacio: 'Aún no hay empleados activos.',
+  });
+
+  // 4. Candidatos por etapa en vacantes abiertas o pausadas
+  if (verReclutamiento) {
+    const activas = postulaciones.filter((p) => p.vacante && p.vacante.estado !== 'cerrada');
+    tarjetaGrafica(el.querySelector('#g-reclutamiento'), {
+      tipo: 'barras',
+      titulo: 'Candidatos por etapa',
+      subtitulo: 'Vacantes abiertas y pausadas',
+      categorias: ETAPAS.map(([, t]) => t),
+      valores: ETAPAS.map(([v]) => activas.filter((p) => p.etapa === v).length),
+      formato: entero,
+      vacio: 'No hay candidatos en procesos activos.',
+    });
+  }
 }

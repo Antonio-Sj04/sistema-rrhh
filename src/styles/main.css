@@ -574,6 +574,55 @@ tfoot td { font-weight: 700; background: var(--superficie-2); border-top: 2px so
 
 .estrellas { color: #f5a524; letter-spacing: 1px; }
 
+/* ---------- Gráficas ---------- */
+:root {
+  --viz-serie-1: #2a78d6;
+  --viz-serie-2: #eb6834;
+  --viz-grid: #e8ebf2;
+  --viz-base: #c3c8d6;
+  --viz-muted: #7c849b;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --viz-serie-1: #3987e5;
+    --viz-serie-2: #d95926;
+    --viz-grid: #232b43;
+    --viz-base: #3a4463;
+    --viz-muted: #8a93ad;
+  }
+}
+.rejilla-graficas { grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr)); margin-bottom: 16px; }
+.viz-lienzo { position: relative; min-height: 120px; }
+.viz-lienzo svg { display: block; max-width: 100%; overflow: visible; }
+.viz-grid { stroke: var(--viz-grid); stroke-width: 1; }
+.viz-base { stroke: var(--viz-base); }
+.viz-eje { fill: var(--viz-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.viz-etiqueta { fill: var(--texto-suave); font-size: 12px; }
+.viz-valor { fill: var(--texto); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.viz-zona { fill: transparent; cursor: default; outline: none; }
+.viz-zona:focus-visible { stroke: var(--primario); stroke-width: 2; }
+[data-marca] { transition: opacity 0.12s; }
+[data-marca].atenuada { opacity: 0.35; }
+.viz-leyenda { display: flex; gap: 16px; flex-wrap: wrap; font-size: 13px; color: var(--texto-suave); margin-bottom: 12px; }
+.viz-leyenda > span { display: inline-flex; align-items: center; gap: 6px; }
+.viz-clave { display: inline-block; width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+.viz-tooltip {
+  position: absolute;
+  z-index: 5;
+  pointer-events: none;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  box-shadow: var(--sombra);
+  padding: 8px 10px;
+  font-size: 12px;
+  min-width: 140px;
+  white-space: nowrap;
+}
+.viz-tooltip-titulo { font-weight: 600; margin-bottom: 4px; }
+.viz-tooltip-fila { display: flex; align-items: center; gap: 6px; color: var(--texto-suave); }
+.viz-tooltip-fila strong { margin-left: auto; padding-left: 12px; color: var(--texto); font-variant-numeric: tabular-nums; }
+
 /* ---------- Recibo imprimible ---------- */
 .recibo { max-width: 720px; margin: 0 auto; }
 .recibo-cabecera { display: flex; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
