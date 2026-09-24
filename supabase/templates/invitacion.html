@@ -7,7 +7,7 @@
       <p style="margin:0 0 16px;line-height:1.6">Recursos Humanos te creó un usuario en el sistema para que consultes tus recibos de pago, solicites vacaciones y descargues tus constancias.</p>
       <p style="margin:0 0 24px;line-height:1.6">Para activar tu cuenta, crea tu contraseña con el siguiente botón:</p>
       <p style="margin:0 0 24px;text-align:center">
-        <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#2f5bea;color:#ffffff;text-decoration:none;font-weight:bold;padding:12px 28px;border-radius:8px">Activar mi cuenta</a>
+        <a href="{{ .SiteURL }}/?token_hash={{ .TokenHash }}&type=invite" style="display:inline-block;background:#2f5bea;color:#ffffff;text-decoration:none;font-weight:bold;padding:12px 28px;border-radius:8px">Activar mi cuenta</a>
       </p>
       <p style="margin:0 0 8px;font-size:13px;color:#5d6680;line-height:1.5">Tu usuario es: <strong>{{ .Email }}</strong></p>
       <p style="margin:0;font-size:13px;color:#5d6680;line-height:1.5">Si no esperabas este correo, puedes ignorarlo.</p>

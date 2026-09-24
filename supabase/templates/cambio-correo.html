@@ -6,7 +6,7 @@
       <h1 style="margin:0 0 16px;font-size:22px">Confirma tu nuevo correo</h1>
       <p style="margin:0 0 24px;line-height:1.6">Se solicitó cambiar el correo de tu cuenta de <strong>{{ .Email }}</strong> a <strong>{{ .NewEmail }}</strong>. Confirma el cambio con el siguiente botón:</p>
       <p style="margin:0 0 24px;text-align:center">
-        <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#2f5bea;color:#ffffff;text-decoration:none;font-weight:bold;padding:12px 28px;border-radius:8px">Confirmar cambio</a>
+        <a href="{{ .SiteURL }}/?token_hash={{ .TokenHash }}&type=email_change" style="display:inline-block;background:#2f5bea;color:#ffffff;text-decoration:none;font-weight:bold;padding:12px 28px;border-radius:8px">Confirmar cambio</a>
       </p>
       <p style="margin:0;font-size:13px;color:#5d6680;line-height:1.5">Si no pediste este cambio, avisa de inmediato a Recursos Humanos.</p>
     </div>
