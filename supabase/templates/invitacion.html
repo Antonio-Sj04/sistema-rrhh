@@ -1,0 +1,16 @@
+<!-- Asunto: Te damos la bienvenida al Sistema de Recursos Humanos -->
+<div style="margin:0;padding:32px 16px;background:#f4f6fb;font-family:Arial,Helvetica,sans-serif;color:#1b2233">
+  <div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e2e6ef">
+    <div style="background:#2f5bea;padding:20px 28px;color:#ffffff;font-size:18px;font-weight:bold">Sistema RRHH</div>
+    <div style="padding:28px">
+      <h1 style="margin:0 0 16px;font-size:22px">¡Te damos la bienvenida{{ if .Data.nombre }}, {{ .Data.nombre }}{{ end }}!</h1>
+      <p style="margin:0 0 16px;line-height:1.6">Recursos Humanos te creó un usuario en el sistema para que consultes tus recibos de pago, solicites vacaciones y descargues tus constancias.</p>
+      <p style="margin:0 0 24px;line-height:1.6">Para activar tu cuenta, crea tu contraseña con el siguiente botón:</p>
+      <p style="margin:0 0 24px;text-align:center">
+        <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#2f5bea;color:#ffffff;text-decoration:none;font-weight:bold;padding:12px 28px;border-radius:8px">Activar mi cuenta</a>
+      </p>
+      <p style="margin:0 0 8px;font-size:13px;color:#5d6680;line-height:1.5">Tu usuario es: <strong>{{ .Email }}</strong></p>
+      <p style="margin:0;font-size:13px;color:#5d6680;line-height:1.5">Si no esperabas este correo, puedes ignorarlo.</p>
+    </div>
+  </div>
+</div>
