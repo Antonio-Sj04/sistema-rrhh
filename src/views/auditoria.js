@@ -10,7 +10,7 @@ export async function render(el) {
     <div class="tarjeta">
       <div class="filtros">
         <select id="f-tabla"><option value="">Todas las tablas</option>
-          ${['empleados', 'contratos', 'periodos_nomina', 'parametros_nomina', 'postulantes', 'antecedentes', 'perfiles']
+          ${['empleados', 'contratos', 'periodos_nomina', 'parametros_nomina', 'liquidaciones', 'postulantes', 'antecedentes', 'perfiles', 'usuarios']
             .map((t) => `<option value="${t}">${esc(etiqueta(t))}</option>`).join('')}</select>
         <select id="f-op"><option value="">Todas las operaciones</option>
           ${Object.entries(OPERACIONES).map(([v, t]) => `<option value="${v}">${t}</option>`).join('')}</select>
@@ -35,7 +35,10 @@ export async function render(el) {
         { titulo: 'Usuario', render: (r) => esc(perfiles[r.usuario_id]?.nombre ?? perfiles[r.usuario_id]?.email ?? 'Sistema') },
         { titulo: 'Operación', render: (r) => esc(OPERACIONES[r.operacion]) },
         { titulo: 'Tabla', render: (r) => esc(`${r.esquema}.${r.tabla}`) },
-        { titulo: 'Registro', render: (r) => `<code>${esc(r.registro_id?.slice(0, 8))}</code>` },
+        {
+          titulo: 'Registro',
+          render: (r) => (r.tabla === 'usuarios' ? esc(r.antes?.email ?? '') : `<code>${esc(r.registro_id?.slice(0, 8))}</code>`),
+        },
       ],
       registros,
       { clicable: true, vacio: 'Sin movimientos registrados.' },

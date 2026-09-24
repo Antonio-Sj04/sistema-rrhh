@@ -1,6 +1,6 @@
 import { obtenerPerfil, urlRecuperacion } from '../auth.js';
 import { empresa, ok, supabase } from '../supabase.js';
-import { abrirFormulario, badge, esc, etiqueta, fecha, mostrarError, nombreCompleto, opciones, porId, tabla, toast } from '../ui.js';
+import { abrirFormulario, badge, confirmar, esc, etiqueta, fecha, mostrarError, nombreCompleto, opciones, porId, tabla, toast } from '../ui.js';
 
 const ROLES = [
   ['admin', 'Administrador — acceso total'],
@@ -30,14 +30,39 @@ export async function render(el) {
         { titulo: 'Empleado vinculado', render: (p) => esc(p.empleado_id ? nombreCompleto(emps[p.empleado_id]) : '—') },
         { titulo: 'Alta', render: (p) => fecha(p.created_at) },
         { titulo: 'Estado', render: (p) => (p.activo ? badge('activo') : badge('baja', 'Inactivo')) },
-        { titulo: '', clase: 'derecha', render: (p) => `<button type="button" class="pequeno" data-editar="${p.id}">Editar</button>` },
+        {
+          titulo: '',
+          clase: 'derecha',
+          render: (p) => `<div class="acciones" style="justify-content:flex-end">
+            <button type="button" class="pequeno" data-editar="${p.id}">Editar</button>
+            ${p.id === yo.id ? '' : `<button type="button" class="pequeno peligro" data-eliminar="${p.id}">Eliminar</button>`}</div>`,
+        },
       ],
       perfiles,
     )}</div>`;
 
   const campoEmpleado = { nombre: 'empleado_id', etiqueta: 'Empleado vinculado', tipo: 'select', completo: true, opciones: opciones(empleados, nombreCompleto), ayuda: 'Permite al usuario ver su portal, recibos y solicitudes.' };
 
-  el.querySelector('#lista').addEventListener('click', (e) => {
+  el.querySelector('#lista').addEventListener('click', async (e) => {
+    const borrar = e.target.closest('[data-eliminar]');
+    if (borrar) {
+      const perfil = perfiles.find((p) => p.id === borrar.dataset.eliminar);
+      const vinculado = perfil.empleado_id ? ` Su expediente de empleado (${nombreCompleto(emps[perfil.empleado_id])}) se conserva.` : '';
+      const mensaje = `Se eliminará la cuenta de ${perfil.email}: ya no podrá iniciar sesión y el correo quedará libre para invitarlo de nuevo.${vinculado} Esta acción no se puede deshacer. Si solo quieres bloquear el acceso temporalmente, usa "Editar" y desmarca "Usuario activo".`;
+      if (!(await confirmar(mensaje, { textoAceptar: 'Eliminar usuario', peligro: true }))) return;
+      try {
+        const { error } = await supabase.functions.invoke('eliminar-usuario', { body: { id: perfil.id } });
+        if (error) {
+          const detalle = await error.context?.json?.().catch(() => null);
+          throw new Error(detalle?.error ?? error.message);
+        }
+        toast(`Usuario ${perfil.email} eliminado.`);
+        render(el).catch(mostrarError);
+      } catch (error) {
+        mostrarError(error);
+      }
+      return;
+    }
     const b = e.target.closest('[data-editar]');
     if (!b) return;
     const perfil = perfiles.find((p) => p.id === b.dataset.editar);

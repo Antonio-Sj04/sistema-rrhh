@@ -51,6 +51,7 @@ Permite a los administradores invitar usuarios desde la app:
 ```bash
 npx supabase login
 npx supabase functions deploy invitar-usuario --project-ref TU_PROJECT_REF
+npx supabase functions deploy eliminar-usuario --project-ref TU_PROJECT_REF
 # Portal de empleo: función pública, valida todo internamente
 npx supabase functions deploy postular --no-verify-jwt --project-ref TU_PROJECT_REF
 ```
