@@ -3,7 +3,7 @@ import { obtenerPerfil } from '../auth.js';
 import { TIPOS_AUSENCIA } from '../catalogos.js';
 import { TIPOS_CONSTANCIA, generarConstancia } from '../constancias.js';
 import { sublista } from '../sublista.js';
-import { empresa, ok } from '../supabase.js';
+import { empresa, ok } from '../api.js';
 import { badge, esc, estrellas, etiqueta, fecha, iniciales, moneda, montarPestanas, nombreCompleto } from '../ui.js';
 import { mostrarRecibo } from './periodo.js';
 

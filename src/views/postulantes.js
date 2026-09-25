@@ -1,6 +1,6 @@
 import { tieneRol } from '../auth.js';
 import { navegar } from '../router.js';
-import { ok, reclutamiento, subirArchivo } from '../supabase.js';
+import { ok, reclutamiento, subirArchivo } from '../api.js';
 import { abrirFormulario, badge, esc, fecha, hoy, moneda, nombreCompleto, opciones, persona, tabla, toast } from '../ui.js';
 
 export const CAMPOS_POSTULANTE = [

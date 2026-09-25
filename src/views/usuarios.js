@@ -1,5 +1,5 @@
-import { obtenerPerfil, urlRecuperacion } from '../auth.js';
-import { empresa, ok, supabase } from '../supabase.js';
+import { obtenerPerfil } from '../auth.js';
+import { api, empresa, ok, recurso } from '../api.js';
 import { abrirFormulario, badge, confirmar, esc, etiqueta, fecha, mostrarError, nombreCompleto, opciones, porId, tabla, toast } from '../ui.js';
 
 const ROLES = [
@@ -13,7 +13,7 @@ const ROLES = [
 export async function render(el) {
   const yo = obtenerPerfil();
   const [perfiles, empleados] = await Promise.all([
-    ok(supabase.from('perfiles').select('*').order('created_at')),
+    ok(recurso('perfiles').select('*').order('created_at')),
     ok(empresa('empleados').select('id, nombres, apellidos, email').neq('estado', 'baja').order('apellidos')),
   ]);
   const emps = porId(empleados);
@@ -51,11 +51,7 @@ export async function render(el) {
       const mensaje = `Se eliminará la cuenta de ${perfil.email}: ya no podrá iniciar sesión y el correo quedará libre para invitarlo de nuevo.${vinculado} Esta acción no se puede deshacer. Si solo quieres bloquear el acceso temporalmente, usa "Editar" y desmarca "Usuario activo".`;
       if (!(await confirmar(mensaje, { textoAceptar: 'Eliminar usuario', peligro: true }))) return;
       try {
-        const { error } = await supabase.functions.invoke('eliminar-usuario', { body: { id: perfil.id } });
-        if (error) {
-          const detalle = await error.context?.json?.().catch(() => null);
-          throw new Error(detalle?.error ?? error.message);
-        }
+        await api(`/usuarios/${perfil.id}`, { metodo: 'DELETE' }); // DELETE /api/v1/usuarios/{id}
         toast(`Usuario ${perfil.email} eliminado.`);
         render(el).catch(mostrarError);
       } catch (error) {
@@ -78,7 +74,7 @@ export async function render(el) {
       valores: perfil,
       alGuardar: async (datos) => {
         if (esYo && (datos.rol !== 'admin' || !datos.activo)) throw new Error('No puedes quitarte el rol de administrador ni desactivarte a ti mismo.');
-        await ok(supabase.from('perfiles').update(datos).eq('id', perfil.id));
+        await ok(recurso('perfiles').update(datos).eq('id', perfil.id));
         toast('Usuario actualizado.');
         render(el).catch(mostrarError);
       },
@@ -98,14 +94,7 @@ export async function render(el) {
       valores: { rol: 'empleado' },
       extra: '<p class="texto-suave" style="margin-top:14px">El usuario recibirá un correo para crear su contraseña.</p>',
       alGuardar: async (datos) => {
-        const { data, error } = await supabase.functions.invoke('invitar-usuario', {
-          body: { ...datos, redirectTo: urlRecuperacion() },
-        });
-        if (error) {
-          const detalle = await error.context?.json?.().catch(() => null);
-          throw new Error(detalle?.error ?? error.message);
-        }
-        if (data?.error) throw new Error(data.error);
+        await api('/usuarios', { metodo: 'POST', cuerpo: datos }); // POST /api/v1/usuarios → 201
         toast('Invitación enviada.');
         render(el).catch(mostrarError);
       },

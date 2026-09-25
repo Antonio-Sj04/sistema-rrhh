@@ -1,10 +1,13 @@
-import { fijarRecordarSesion, supabase } from './supabase.js';
+// Estado de autenticación del cliente. El token de sesión vive en una cookie
+// HttpOnly que administra la API; aquí solo se guarda el perfil en memoria.
+import { api } from './api.js';
 
-let sesion = null;
+let usuario = null;
 let perfil = null;
 const oyentes = new Set();
 
-export const obtenerSesion = () => sesion;
+/** { user: { id, email } } si hay sesión; null si no. */
+export const obtenerSesion = () => (usuario ? { user: usuario } : null);
 export const obtenerPerfil = () => perfil;
 
 /** ¿El usuario actual tiene alguno de los roles indicados? */
@@ -12,71 +15,48 @@ export const tieneRol = (...roles) => Boolean(perfil && roles.includes(perfil.ro
 
 export const alCambiarAuth = (fn) => oyentes.add(fn);
 
-async function cargarPerfil() {
-  if (!sesion) {
-    perfil = null;
-    return;
-  }
-  const { data, error } = await supabase.from('perfiles').select('*').eq('id', sesion.user.id).single();
-  if (error) throw error;
-  if (!data.activo) {
-    await supabase.auth.signOut();
-    throw new Error('Tu usuario está desactivado. Contacta al administrador.');
-  }
-  perfil = data;
+function fijar(datos) {
+  usuario = datos?.usuario ?? null;
+  perfil = datos?.perfil ?? null;
 }
 
+/** Consulta a la API si hay una sesión activa (cookie HttpOnly). */
 export async function iniciarAuth() {
-  const { data } = await supabase.auth.getSession();
-  sesion = data.session;
-  await cargarPerfil().catch(() => (perfil = null));
-
-  supabase.auth.onAuthStateChange((evento, nuevaSesion) => {
-    const cambioUsuario = nuevaSesion?.user.id !== sesion?.user.id;
-    sesion = nuevaSesion;
-    if (evento === 'SIGNED_OUT' || cambioUsuario) {
-      // No se debe esperar otra llamada a Supabase dentro de este callback
-      setTimeout(async () => {
-        await cargarPerfil().catch(() => (perfil = null));
-        oyentes.forEach((fn) => fn(evento));
-      });
-    }
+  try {
+    fijar(await api('/auth/sesion'));
+  } catch {
+    fijar(null);
+  }
+  // Si la API responde 401 en cualquier petición, la sesión terminó
+  window.addEventListener('sesion-expirada', () => {
+    if (!usuario) return;
+    fijar(null);
+    oyentes.forEach((fn) => fn('SIGNED_OUT'));
   });
 }
 
 export async function iniciarSesion(email, password, recordar = false) {
-  // Se decide dónde guardar la sesión antes de crearla
-  fijarRecordarSesion(recordar);
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) throw error;
-  sesion = data.session;
-  await cargarPerfil();
+  fijar(await api('/auth/login', { metodo: 'POST', cuerpo: { email, password, recordar } }));
 }
 
-/**
- * Cierra la sesión. Con todosLosDispositivos invalida también las sesiones
- * abiertas en otros equipos (dejan de funcionar al renovar su token, ≤ 1 hora).
- */
+/** Cierra la sesión; con todosLosDispositivos revoca también las demás. */
 export async function cerrarSesion(todosLosDispositivos = false) {
-  const { error } = await supabase.auth.signOut({ scope: todosLosDispositivos ? 'global' : 'local' });
-  // Si el servidor no responde, la sesión local se borra de todos modos
-  if (error) await supabase.auth.signOut({ scope: 'local' });
-  fijarRecordarSesion(false);
-  sesion = null;
-  perfil = null;
+  await api('/auth/logout', { metodo: 'POST', cuerpo: { todos: todosLosDispositivos } }).catch(() => {});
+  fijar(null);
 }
-
-/** URL a la que Supabase redirige en recuperación de contraseña e invitaciones. */
-export const urlRecuperacion = () => `${location.origin}${location.pathname}?recuperar=1`;
 
 export async function solicitarRecuperacion(email) {
-  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: urlRecuperacion() });
-  if (error) throw error;
+  await api('/auth/recuperar', { metodo: 'POST', cuerpo: { email } });
+}
+
+/** Valida el enlace de un correo (invitación, recuperación) y abre la sesión. */
+export async function verificarEnlace(tokenHash, tipo) {
+  await api('/auth/verificar', { metodo: 'POST', cuerpo: { token_hash: tokenHash, type: tipo } });
+  fijar(await api('/auth/sesion'));
 }
 
 export async function cambiarPassword(password) {
-  const { error } = await supabase.auth.updateUser({ password });
-  if (error) throw error;
+  await api('/auth/password', { metodo: 'PUT', cuerpo: { password } });
 }
 
 /** Página de inicio según el rol. */

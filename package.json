@@ -11,7 +11,8 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.0",
-    "jspdf": "^4.2.1"
+    "jspdf": "^4.2.1",
+    "postgres": "^3.4.9"
   },
   "devDependencies": {
     "vite": "^7.1.0"

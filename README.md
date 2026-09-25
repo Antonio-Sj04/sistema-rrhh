@@ -2,9 +2,50 @@
 
 Aplicación web SPA para la gestión de personal, nómina (Guatemala) y reclutamiento.
 
-- **Frontend:** HTML + CSS + JavaScript (módulos ES) con [Vite](https://vitejs.dev)
-- **Backend:** [Supabase](https://supabase.com) — PostgreSQL, Auth, Storage y Edge Functions
-- **Router:** SPA basada en hash (`#/empleados`), funciona en cualquier hosting estático
+- **Frontend:** HTML5 + CSS3 puro + JavaScript ES6+ (módulos) con [Vite](https://vitejs.dev). SPA con **History API**.
+- **Backend:** API REST propia (`/api/v1`) en Netlify Functions (Node.js), consumida con `fetch`/`async-await`.
+- **Datos:** [Supabase](https://supabase.com) — PostgreSQL (tablas relacionales + JSONB), Auth, Storage y RLS.
+
+## Arquitectura
+
+```
+Navegador (SPA)  ──fetch──▶  API REST /api/v1 (Netlify Functions)  ──▶  Supabase
+ History API                  · valida y sanea entradas                 · PostgreSQL + RLS
+ localStorage: tema           · cookies HttpOnly/Secure/SameSite        · Auth (JWT)
+ sessionStorage: borradores   · anti-CSRF (cabecera + Origin)           · Storage (CV, documentos)
+ cookie de sesión (HttpOnly)  · SQL directo (reportes, JSONB)
+```
+
+- **El navegador no tiene ninguna clave de Supabase.** Todo pasa por la API; la clave `service_role` y la conexión SQL solo existen como variables de entorno del servidor.
+- **Sesión:** la API inicia sesión en Supabase Auth y guarda los tokens en cookies `HttpOnly; Secure; SameSite=Strict; Path=/api`. JavaScript no puede leerlas (mitiga XSS) y no se envían desde otros sitios (mitiga CSRF). El token se renueva solo.
+- **RLS siempre activo:** la API consulta Supabase con el token del usuario; las consultas SQL directas adoptan su identidad (`set local role authenticated` + `request.jwt.claims`).
+- **History API:** URLs limpias (`/empleados/123`) con `pushState`/`replaceState`/`popstate`; `netlify.toml` sirve `index.html` en cualquier ruta.
+- **Almacenamiento web:** `localStorage` guarda el tema (claro/oscuro/sistema); `sessionStorage` guarda el borrador del formulario de postulación de 3 pasos; la sesión vive en cookies HttpOnly.
+
+### Endpoints principales
+
+| Método | Ruta | Descripción | Respuestas |
+|---|---|---|---|
+| POST | `/api/v1/auth/login` | Inicia sesión, crea cookies HttpOnly | 200, 400, 401, 403 |
+| GET | `/api/v1/auth/sesion` | Usuario y perfil actual (renueva el token) | 200 |
+| POST | `/api/v1/auth/logout` | Cierra sesión (`{ todos: true }` en todos los dispositivos) | 200 |
+| POST | `/api/v1/auth/recuperar` | Envía correo de recuperación | 200, 400 |
+| POST | `/api/v1/auth/verificar` | Valida enlaces de invitación/recuperación | 200, 400 |
+| PUT | `/api/v1/auth/password` | Cambia la contraseña | 200, 400, 401 |
+| GET | `/api/v1/{recurso}` | Lista con `filtros`, `orden`, `limite`, `select`, `conteo` | 200, 400, 401, 403 |
+| GET | `/api/v1/{recurso}/{id}` | Un registro | 200, 401, 404 |
+| POST | `/api/v1/{recurso}` | Crea (`{ datos }`) | 201, 400, 401, 403, 409 |
+| PUT | `/api/v1/{recurso}/{id}` | Actualiza (`{ datos }`) | 200, 400, 401, 403 |
+| DELETE | `/api/v1/{recurso}/{id}` | Elimina | 200, 401, 403, 409 |
+| POST / DELETE | `/api/v1/usuarios[/{id}]` | Invita o elimina cuentas (admin) | 201, 200, 403, 409 |
+| POST | `/api/v1/postulaciones/{id}/contratar` | Convierte al postulante en empleado | 201, 403 |
+| GET / POST / DELETE | `/api/v1/archivos/{bucket}` | Sube, descarga (`/url`) y borra archivos | 201, 200, 400, 413 |
+| GET | `/api/v1/reportes/resumen` | Indicadores (SQL directo) | 200, 401 |
+| GET | `/api/v1/reportes/bitacora` | Bitácora con búsqueda en JSONB (SQL directo) | 200, 400, 401 |
+| GET | `/api/v1/publico/vacantes` | Vacantes publicadas (sin sesión) | 200 |
+| POST | `/api/v1/publico/postulaciones` | Postulación con CV (multipart) | 201, 400, 404, 413, 429 |
+
+Recursos disponibles: ver la lista blanca en [`server/recursos.js`](server/recursos.js). Errores: `{ "error": { "codigo", "mensaje" } }`. Toda petición que modifica datos exige la cabecera `X-Requested-With: fetch`.
 
 ## Arquitectura de datos
 
@@ -46,26 +87,16 @@ Las reglas se aplican **en la base de datos** (RLS), no solo en la interfaz.
    update public.perfiles set rol = 'admin' where email = 'tu-correo@ejemplo.com';
    ```
 
-### 3. Publicar la función de invitaciones
-Permite a los administradores invitar usuarios desde la app:
+### 3. Ejecutar la aplicación
 ```bash
-npx supabase login
-npx supabase functions deploy invitar-usuario --project-ref TU_PROJECT_REF
-npx supabase functions deploy eliminar-usuario --project-ref TU_PROJECT_REF
-# Portal de empleo: función pública, valida todo internamente
-npx supabase functions deploy postular --no-verify-jwt --project-ref TU_PROJECT_REF
-```
-
-### 4. Ejecutar la aplicación
-```bash
-cp .env.example .env   # y completa URL y anon key (Project Settings → API)
+cp .env.example .env   # completa las 4 variables del backend
 npm install
-npm run dev            # http://localhost:5173
-npm test               # pruebas de los cálculos de nómina
+npm run dev            # http://localhost:5173 (sirve la app y la API /api/v1)
+npm test               # pruebas: nómina, montos en letras, validaciones y seguridad de la API
 ```
 
-### 5. Publicar
-En **Vercel**, **Netlify** o **Cloudflare Pages**: comando de build `npm run build`, carpeta de salida `dist`, y las variables `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`.
+### 4. Publicar en Netlify
+`netlify.toml` ya define el build (`npm run build` → `dist`), la función de la API y las redirecciones. En **Environment variables** agrega `SUPABASE_URL`, `SUPABASE_ANON_KEY`, y como **secretas** `SUPABASE_SERVICE_ROLE_KEY` y `DATABASE_URL`.
 
 ## Módulos
 
@@ -111,9 +142,10 @@ Cálculos en `src/lib/nomina-gt.js`, con parámetros editables desde la app (tab
 ├── index.html
 ├── src/
 │   ├── main.js            # arranque y manejo de enlaces de invitación/recuperación
-│   ├── router.js          # rutas SPA y control de acceso por rol
+│   ├── router.js          # rutas SPA con History API y control de acceso por rol
 │   ├── auth.js            # sesión y perfil del usuario
-│   ├── supabase.js        # cliente y helpers (esquemas, Storage)
+│   ├── api.js             # cliente fetch de la API REST (/api/v1)
+│   ├── tema.js            # tema claro/oscuro (localStorage)
 │   ├── layout.js          # menú lateral según el rol
 │   ├── ui.js              # tablas, formularios, modales, notificaciones
 │   ├── sublista.js        # listas relacionadas reutilizables
@@ -121,6 +153,8 @@ Cálculos en `src/lib/nomina-gt.js`, con parámetros editables desde la app (tab
 │   ├── lib/nomina-gt.js   # cálculos de nómina
 │   ├── styles/main.css
 │   └── views/             # una vista por pantalla
+├── server/                # API REST: rutas, validación, cookies, SQL directo
+├── netlify/functions/     # función que publica la API en /api/v1
 ├── supabase/
 │   ├── migrations/        # esquema, RLS, Storage
 │   ├── functions/invitar-usuario/

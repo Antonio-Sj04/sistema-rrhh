@@ -2,7 +2,7 @@ import { obtenerSesion, tieneRol } from '../auth.js';
 import { TIPOS_AUSENCIA, camposEmpleado, cargarCatalogos } from '../catalogos.js';
 import { recargarVista } from '../router.js';
 import { botonArchivo, sublista } from '../sublista.js';
-import { empresa, ok, subirArchivo, supabase } from '../supabase.js';
+import { eliminarArchivo, empresa, ok, subirArchivo } from '../api.js';
 import { TIPOS_CONSTANCIA, abrirConstancia } from '../constancias.js';
 import { abrirBaja, imprimirContenido, liquidacionHTML } from '../liquidacion.js';
 import {
@@ -24,7 +24,7 @@ export async function render(el, { id }) {
   const jefe = emp.jefe_id ? await ok(empresa('empleados').select('nombres, apellidos').eq('id', emp.jefe_id).maybeSingle()) : null;
 
   el.innerHTML = `
-    <a class="miga" href="#/empleados">← Empleados</a>
+    <a class="miga" href="/empleados">← Empleados</a>
     <div class="encabezado">
       <div class="persona">
         <span class="avatar grande">${esc(iniciales(emp))}</span>
@@ -191,7 +191,7 @@ export async function render(el, { id }) {
             await ok(empresa('documentos_empleado').insert({ ...datos, empleado_id: id, ruta }));
           },
           eliminar: async (d) => {
-            await supabase.storage.from('documentos').remove([d.ruta]);
+            await eliminarArchivo('documentos', d.ruta);
             await ok(empresa('documentos_empleado').delete().eq('id', d.id));
           },
         }),
@@ -208,7 +208,7 @@ export async function render(el, { id }) {
           cargar: () =>
             ok(empresa('recibos_nomina').select('*, periodo:periodos_nomina(id, nombre, fecha_pago, estado)').eq('empleado_id', id).order('created_at', { ascending: false })),
           columnas: [
-            { titulo: 'Período', render: (r) => `<a href="#/nomina/${r.periodo.id}">${esc(r.periodo.nombre)}</a>` },
+            { titulo: 'Período', render: (r) => `<a href="/nomina/${r.periodo.id}">${esc(r.periodo.nombre)}</a>` },
             { titulo: 'Estado', render: (r) => badge(r.periodo.estado) },
             { titulo: 'Ingresos', render: (r) => moneda(r.total_ingresos), clase: 'numero' },
             { titulo: 'Descuentos', render: (r) => moneda(r.total_descuentos), clase: 'numero' },

@@ -1,6 +1,6 @@
 // Componente reutilizable: lista de registros relacionados con alta y baja
 // (contratos de un empleado, experiencia de un postulante, etc.).
-import { urlFirmada } from './supabase.js';
+import { urlFirmada } from './api.js';
 import { abrirFormulario, confirmar, esc, mostrarError, tabla, toast } from './ui.js';
 
 /**

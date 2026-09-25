@@ -1,7 +1,7 @@
 // Constancias laborales y de ingresos en PDF.
 // jsPDF se carga solo cuando se genera una constancia.
 import { fechaLarga, quetzalesALetras } from './lib/letras.js';
-import { empresa, ok } from './supabase.js';
+import { empresa, ok } from './api.js';
 import { abrirFormulario, hoy, moneda, nombreCompleto, toast } from './ui.js';
 
 export const TIPOS_CONSTANCIA = [

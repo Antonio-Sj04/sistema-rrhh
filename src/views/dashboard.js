@@ -1,10 +1,9 @@
 import { obtenerPerfil, tieneRol } from '../auth.js';
 import { ETAPAS } from '../catalogos.js';
 import { tarjetaGrafica } from '../graficas.js';
-import { empresa, ok, reclutamiento } from '../supabase.js';
+import { api, empresa, ok, reclutamiento } from '../api.js';
 import { badge, esc, fecha, moneda, nombreCompleto, porId, tabla } from '../ui.js';
 
-const contar = (consulta) => ok(consulta).catch(() => null);
 const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 const monedaCorta = (n) => `Q${new Intl.NumberFormat('es-GT', { maximumFractionDigits: 0 }).format(n)}`;
 const entero = (n) => new Intl.NumberFormat('es-GT').format(n);
@@ -25,19 +24,12 @@ export async function render(el) {
   const perfil = obtenerPerfil();
   const verReclutamiento = tieneRol('admin', 'rrhh', 'jefe');
   const verNomina = tieneRol('admin', 'rrhh', 'nomina');
-  const inicioMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
   const meses = ultimosMeses();
 
-  const [activos, pendientes, vacantes, postulantesMes, periodos, solicitudes, empleados, departamentos, postulaciones] =
+  const [resumen, periodos, solicitudes, empleados, departamentos, postulaciones] =
     await Promise.all([
-      contar(empresa('empleados').select('id', { count: 'exact', head: true }).eq('estado', 'activo')),
-      contar(empresa('ausencias').select('id', { count: 'exact', head: true }).eq('estado', 'pendiente')),
-      verReclutamiento
-        ? contar(reclutamiento('vacantes').select('id', { count: 'exact', head: true }).eq('estado', 'abierta'))
-        : null,
-      verReclutamiento
-        ? contar(reclutamiento('postulaciones').select('id', { count: 'exact', head: true }).gte('created_at', inicioMes))
-        : null,
+      // Indicadores: GET /api/v1/reportes/resumen (consulta SQL directa con RLS)
+      api('/reportes/resumen').then((r) => r.datos).catch(() => ({})),
       verNomina
         ? ok(
             empresa('periodos_nomina')
@@ -61,6 +53,11 @@ export async function render(el) {
         : [],
     ]);
 
+  const activos = resumen.empleados_activos;
+  const pendientes = resumen.ausencias_pendientes;
+  const vacantes = verReclutamiento ? resumen.vacantes_abiertas : null;
+  const postulantesMes = verReclutamiento ? resumen.postulaciones_mes : null;
+
   const suma = (p, campos) => p.recibos_nomina.reduce((s, r) => s + campos.reduce((t, c) => t + Number(r[c]), 0), 0);
   const ultimaNomina = periodos.find((p) => p.tipo === 'mensual') ?? periodos[0];
 
@@ -78,11 +75,11 @@ export async function render(el) {
       <p>Resumen general al ${fecha(new Date().toISOString())}</p></div>
     </div>
     <div class="rejilla rejilla-kpi" style="margin-bottom:16px">
-      ${kpi('Empleados activos', activos, 'Plantilla actual', '#/empleados')}
-      ${kpi('Solicitudes pendientes', pendientes, 'Vacaciones y permisos', '#/ausencias')}
-      ${kpi('Vacantes abiertas', vacantes, 'En reclutamiento', '#/vacantes')}
-      ${kpi('Postulaciones del mes', postulantesMes, 'Nuevos candidatos', '#/proceso')}
-      ${ultimaNomina ? kpi('Última nómina', moneda(suma(ultimaNomina, ['liquido'])), ultimaNomina.nombre, `#/nomina/${ultimaNomina.id}`) : ''}
+      ${kpi('Empleados activos', activos, 'Plantilla actual', '/empleados')}
+      ${kpi('Solicitudes pendientes', pendientes, 'Vacaciones y permisos', '/ausencias')}
+      ${kpi('Vacantes abiertas', vacantes, 'En reclutamiento', '/vacantes')}
+      ${kpi('Postulaciones del mes', postulantesMes, 'Nuevos candidatos', '/proceso')}
+      ${ultimaNomina ? kpi('Última nómina', moneda(suma(ultimaNomina, ['liquido'])), ultimaNomina.nombre, `/nomina/${ultimaNomina.id}`) : ''}
     </div>
     <div class="rejilla rejilla-graficas">
       ${verNomina ? '<div class="tarjeta" id="g-planilla"></div>' : ''}
@@ -91,7 +88,7 @@ export async function render(el) {
       ${verReclutamiento ? '<div class="tarjeta" id="g-reclutamiento"></div>' : ''}
     </div>
     <div class="tarjeta">
-      <div class="tarjeta-titulo"><h2>Solicitudes por aprobar</h2><a href="#/ausencias">Ver todas</a></div>
+      <div class="tarjeta-titulo"><h2>Solicitudes por aprobar</h2><a href="/ausencias">Ver todas</a></div>
       ${tabla(
         [
           { titulo: 'Empleado', render: (a) => esc(nombreCompleto(a.empleado)) },

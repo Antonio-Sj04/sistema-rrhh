@@ -1,9 +1,37 @@
 # Netlify compila el proyecto en cada push a main.
-# Las variables VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY se definen en
-# Project configuration → Environment variables (no se suben al repositorio).
+# Variables de entorno (Project configuration → Environment variables):
+#   SUPABASE_URL / SUPABASE_ANON_KEY     (o VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY)
+#   SUPABASE_SERVICE_ROLE_KEY            secreta: solo la usa la API
+#   DATABASE_URL                         secreta: conexión SQL directa (pooler)
 [build]
   command = "npm run build"
   publish = "dist"
+  functions = "netlify/functions"
 
 [build.environment]
   NODE_VERSION = "22"
+
+[functions]
+  node_bundler = "esbuild"
+
+# API REST propia
+[[redirects]]
+  from = "/api/v1/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+  force = true
+
+# SPA con History API: toda ruta que no sea un archivo carga la app
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+    Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
