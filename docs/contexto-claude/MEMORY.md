@@ -1,0 +1,2 @@
+- [Proyecto Supabase RRHH](proyecto-supabase-rrhh.md) — ref oclvfhrehdkfglqsgckh, qué está configurado y pasos manuales
+- [Sin coautor en commits](sin-coautor-en-commits.md) — el trailer Co-Authored-By bloquea los deploys de Netlify; no agregarlo
