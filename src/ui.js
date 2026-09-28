@@ -109,8 +109,11 @@ export function tabla(columnas, filas, { vacio = 'No hay registros.', clicable =
   const cabecera = columnas.map((c) => `<th class="${c.clase ?? ''}">${esc(c.titulo)}</th>`).join('');
   const cuerpo = filas
     .map((f) => {
+      const contenidos = columnas.map((c) => (c.render ? c.render(f) : esc(f[c.campo] ?? '—')));
+      // En teléfono, la última celda que es solo una etiqueta de estado va en la esquina de la tarjeta
+      const esquina = contenidos.findLastIndex((h, i) => i > 0 && /^<span class="badge[^>]*>[^<]*<\/span>$/.test(h.trim()));
       const celdas = columnas
-        .map((c) => `<td class="${c.clase ?? ''}" data-label="${esc(c.titulo)}">${c.render ? c.render(f) : esc(f[c.campo] ?? '—')}</td>`)
+        .map((c, i) => `<td class="${c.clase ?? ''}${i === esquina ? ' esquina' : ''}" data-label="${esc(c.titulo)}">${contenidos[i]}</td>`)
         .join('');
       return `<tr ${clicable ? `class="clicable" data-id="${esc(f.id)}"` : ''}>${celdas}</tr>`;
     })

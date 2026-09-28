@@ -47,10 +47,10 @@ export async function render(el) {
       : 'Consulta mediante la API de datos.';
     lista.innerHTML = tabla(
       [
-        { titulo: 'Fecha', render: (x) => fecha(x.fecha, true) },
         { titulo: 'Usuario', render: (x) => personaUsuario(perfiles[x.usuario_id]?.nombre ?? perfiles[x.usuario_id]?.email ?? (x.usuario_id ? 'Usuario eliminado' : 'Sistema')) },
+        { titulo: 'Fecha', render: (x) => fecha(x.fecha, true) },
         { titulo: 'Operación', render: (x) => badge(COLOR_OPERACION[x.operacion], OPERACIONES[x.operacion]) },
-        { titulo: 'Tabla', render: (x) => esc(`${x.esquema}.${x.tabla}`) },
+        { titulo: 'Tabla', render: (x) => `<span title="${esc(`${x.esquema}.${x.tabla}`)}">${esc(etiqueta(x.tabla))}</span>` },
         {
           titulo: 'Registro',
           render: (x) => (x.tabla === 'usuarios' ? esc(x.antes?.email ?? '') : esc(x.despues?.nombres ?? x.antes?.nombres ?? x.despues?.nombre ?? x.registro_id?.slice(0, 8) ?? '')),
