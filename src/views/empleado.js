@@ -6,7 +6,7 @@ import { eliminarArchivo, empresa, ok, subirArchivo } from '../api.js';
 import { TIPOS_CONSTANCIA, abrirConstancia } from '../constancias.js';
 import { abrirBaja, imprimirContenido, liquidacionHTML } from '../liquidacion.js';
 import {
-  abrirFormulario, badge, confirmar, esc, estrellas, etiqueta, fecha, hoy, iniciales, moneda, montarPestanas,
+  abrirFormulario, badge, colorAvatar, confirmar, esc, estrellas, etiqueta, fecha, hoy, iniciales, moneda, montarPestanas,
   mostrarError, nombreCompleto, porId, toast,
 } from '../ui.js';
 
@@ -27,7 +27,7 @@ export async function render(el, { id }) {
     <a class="miga" href="/empleados">← Empleados</a>
     <div class="encabezado">
       <div class="persona">
-        <span class="avatar grande">${esc(iniciales(emp))}</span>
+        <span class="avatar grande" style="${colorAvatar(nombreCompleto(emp))}">${esc(iniciales(emp))}</span>
         <div><h1>${esc(nombreCompleto(emp))}</h1>
         <p>${esc(emp.codigo)} · ${esc(puestos[emp.puesto_id]?.nombre ?? 'Sin puesto')} · ${badge(emp.estado)}</p></div>
       </div>

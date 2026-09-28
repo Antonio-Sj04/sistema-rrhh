@@ -1,10 +1,17 @@
 // Bitácora: GET /api/v1/reportes/bitacora (SQL directo sobre las columnas
 // JSONB "antes" y "despues" de empresa.auditoria).
 import { api, ok, recurso } from '../api.js';
-import { esc, etiqueta, fecha, modal, porId, tabla } from '../ui.js';
+import { badge, esc, persona, etiqueta, fecha, modal, porId, tabla } from '../ui.js';
 
 const OPERACIONES = { INSERT: 'Creación', UPDATE: 'Modificación', DELETE: 'Eliminación' };
+const COLOR_OPERACION = { INSERT: 'activo', UPDATE: 'info', DELETE: 'baja' }; // claves de color de badge()
 const TABLAS = ['empleados', 'contratos', 'periodos_nomina', 'parametros_nomina', 'liquidaciones', 'postulantes', 'antecedentes', 'perfiles', 'usuarios'];
+
+/** Avatar + nombre del usuario que hizo el cambio. */
+function personaUsuario(nombre) {
+  const [n, ...resto] = String(nombre).split(' ');
+  return persona({ nombres: n, apellidos: resto.join(' ') });
+}
 
 const valorTexto = (v) => (v == null ? '—' : typeof v === 'object' ? JSON.stringify(v) : String(v));
 
@@ -41,8 +48,8 @@ export async function render(el) {
     lista.innerHTML = tabla(
       [
         { titulo: 'Fecha', render: (x) => fecha(x.fecha, true) },
-        { titulo: 'Usuario', render: (x) => esc(perfiles[x.usuario_id]?.nombre ?? perfiles[x.usuario_id]?.email ?? (x.usuario_id ? 'Usuario eliminado' : 'Sistema')) },
-        { titulo: 'Operación', render: (x) => esc(OPERACIONES[x.operacion]) },
+        { titulo: 'Usuario', render: (x) => personaUsuario(perfiles[x.usuario_id]?.nombre ?? perfiles[x.usuario_id]?.email ?? (x.usuario_id ? 'Usuario eliminado' : 'Sistema')) },
+        { titulo: 'Operación', render: (x) => badge(COLOR_OPERACION[x.operacion], OPERACIONES[x.operacion]) },
         { titulo: 'Tabla', render: (x) => esc(`${x.esquema}.${x.tabla}`) },
         {
           titulo: 'Registro',

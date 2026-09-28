@@ -30,9 +30,18 @@ export const nombreCompleto = (p) => (p ? `${p.nombres} ${p.apellidos}` : '—')
 
 export const iniciales = (p) => `${p?.nombres?.[0] ?? ''}${p?.apellidos?.[0] ?? ''}`.toUpperCase();
 
+// Color estable por persona (el mismo nombre siempre tiene el mismo color)
+const COLORES_AVATAR = ['#6366f1', '#14b8a6', '#10b981', '#d946ef', '#0ea5e9', '#f43f5e', '#8b5cf6', '#f59e0b'];
+
+export function colorAvatar(texto) {
+  let h = 0;
+  for (const c of String(texto ?? '')) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return `background:${COLORES_AVATAR[h % COLORES_AVATAR.length]};color:#fff`;
+}
+
 export function persona(p, detalle = '') {
-  return `<div class="persona"><span class="avatar">${esc(iniciales(p))}</span>
-    <div><div>${esc(nombreCompleto(p))}</div>${detalle ? `<div class="texto-suave">${esc(detalle)}</div>` : ''}</div></div>`;
+  return `<div class="persona"><span class="avatar" style="${colorAvatar(nombreCompleto(p))}">${esc(iniciales(p))}</span>
+    <div><div class="persona-nombre">${esc(nombreCompleto(p))}</div>${detalle ? `<div class="texto-suave">${esc(detalle)}</div>` : ''}</div></div>`;
 }
 
 const COLORES_ESTADO = {
@@ -101,12 +110,12 @@ export function tabla(columnas, filas, { vacio = 'No hay registros.', clicable =
   const cuerpo = filas
     .map((f) => {
       const celdas = columnas
-        .map((c) => `<td class="${c.clase ?? ''}">${c.render ? c.render(f) : esc(f[c.campo] ?? '—')}</td>`)
+        .map((c) => `<td class="${c.clase ?? ''}" data-label="${esc(c.titulo)}">${c.render ? c.render(f) : esc(f[c.campo] ?? '—')}</td>`)
         .join('');
       return `<tr ${clicable ? `class="clicable" data-id="${esc(f.id)}"` : ''}>${celdas}</tr>`;
     })
     .join('');
-  return `<div class="tabla-contenedor"><table><thead><tr>${cabecera}</tr></thead>
+  return `<div class="tabla-contenedor"><table class="tabla-adaptable"><thead><tr>${cabecera}</tr></thead>
     <tbody>${cuerpo}</tbody>${pie ? `<tfoot>${pie}</tfoot>` : ''}</table></div>`;
 }
 
