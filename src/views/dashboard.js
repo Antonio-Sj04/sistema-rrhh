@@ -1,6 +1,7 @@
 import { obtenerPerfil, tieneRol } from '../auth.js';
 import { ETAPAS } from '../catalogos.js';
 import { tarjetaGrafica } from '../graficas.js';
+import { icono } from '../layout.js';
 import { api, empresa, ok, reclutamiento } from '../api.js';
 import { badge, esc, fecha, moneda, nombreCompleto, porId, tabla } from '../ui.js';
 
@@ -61,25 +62,29 @@ export async function render(el) {
   const suma = (p, campos) => p.recibos_nomina.reduce((s, r) => s + campos.reduce((t, c) => t + Number(r[c]), 0), 0);
   const ultimaNomina = periodos.find((p) => p.tipo === 'mensual') ?? periodos[0];
 
-  const kpi = (etiqueta, valor, nota = '', href = '') =>
+  const kpi = (etiqueta, valor, nota, href, simbolo, tono) =>
     valor == null
       ? ''
-      : `<a class="tarjeta kpi" href="${href}" style="color:inherit;text-decoration:none">
-          <div class="kpi-etiqueta">${esc(etiqueta)}</div>
+      : `<a class="tarjeta kpi" href="${href}">
+          <div class="kpi-cabecera"><span class="kpi-icono tono-${tono}">${icono(simbolo)}</span><span class="kpi-nota">${esc(nota)}</span></div>
           <div class="kpi-valor">${esc(valor)}</div>
-          <div class="kpi-nota">${esc(nota)}</div></a>`;
+          <div class="kpi-etiqueta">${esc(etiqueta)}</div></a>`;
+
+  const hoyLargo = new Date().toLocaleDateString('es-GT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const primerNombre = (perfil.nombre ?? perfil.email).split(/\s+/)[0];
 
   el.innerHTML = `
-    <div class="encabezado">
-      <div><h1>Hola, ${esc(perfil.nombre ?? perfil.email)}</h1>
-      <p>Resumen general al ${fecha(new Date().toISOString())}</p></div>
+    <div class="encabezado saludo">
+      <div><div class="saludo-fecha">${esc(hoyLargo.charAt(0).toUpperCase() + hoyLargo.slice(1))}</div>
+      <h1>Hola, ${esc(primerNombre)} <span aria-hidden="true">👋</span></h1>
+      <p>Aquí tienes lo que está pasando hoy en la empresa.</p></div>
     </div>
     <div class="rejilla rejilla-kpi" style="margin-bottom:16px">
-      ${kpi('Empleados activos', activos, 'Plantilla actual', '/empleados')}
-      ${kpi('Solicitudes pendientes', pendientes, 'Vacaciones y permisos', '/ausencias')}
-      ${kpi('Vacantes abiertas', vacantes, 'En reclutamiento', '/vacantes')}
-      ${kpi('Postulaciones del mes', postulantesMes, 'Nuevos candidatos', '/proceso')}
-      ${ultimaNomina ? kpi('Última nómina', moneda(suma(ultimaNomina, ['liquido'])), ultimaNomina.nombre, `/nomina/${ultimaNomina.id}`) : ''}
+      ${kpi('Empleados activos', activos, 'Plantilla', '/empleados', 'empleados', 'indigo')}
+      ${kpi('Solicitudes pendientes', pendientes, 'Por aprobar', '/ausencias', 'ausencias', 'ambar')}
+      ${kpi('Vacantes abiertas', vacantes, 'Reclutando', '/vacantes', 'vacantes', 'verde')}
+      ${kpi('Postulaciones del mes', postulantesMes, 'Este mes', '/proceso', 'proceso', 'fucsia')}
+      ${ultimaNomina ? kpi('Última nómina', moneda(suma(ultimaNomina, ['liquido'])), ultimaNomina.nombre, `/nomina/${ultimaNomina.id}`, 'nomina', 'cielo') : ''}
     </div>
     <div class="rejilla rejilla-graficas">
       ${verNomina ? '<div class="tarjeta" id="g-planilla"></div>' : ''}

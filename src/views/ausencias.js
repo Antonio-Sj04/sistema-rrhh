@@ -50,8 +50,8 @@ export async function render(el) {
           render: (a) =>
             puedeAprobar && a.estado === 'pendiente'
               ? `<div class="acciones" style="justify-content:flex-end">
-                  <button type="button" class="pequeno boton-exito" data-aprobar="${a.id}">Aprobar</button>
-                  <button type="button" class="pequeno peligro" data-rechazar="${a.id}">Rechazar</button></div>`
+                  <button type="button" class="pequeno boton-exito" data-aprobar="${a.id}">✓ Aprobar</button>
+                  <button type="button" class="pequeno peligro-fondo" data-rechazar="${a.id}">✕ Rechazar</button></div>`
               : '',
         },
       ],

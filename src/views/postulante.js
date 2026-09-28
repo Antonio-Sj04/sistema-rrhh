@@ -4,7 +4,7 @@ import { navegar, recargarVista } from '../router.js';
 import { botonArchivo, sublista } from '../sublista.js';
 import { eliminarArchivo, eliminarCarpeta, empresa, ok, reclutamiento, subirArchivo } from '../api.js';
 import {
-  abrirFormulario, badge, confirmar, esc, estrellas, etiqueta, fecha, hoy, iniciales, moneda, montarPestanas,
+  abrirFormulario, badge, colorAvatar, confirmar, esc, estrellas, etiqueta, fecha, hoy, iniciales, moneda, montarPestanas,
   mostrarError, nombreCompleto, opciones, toast,
 } from '../ui.js';
 import { CAMPOS_POSTULANTE } from './postulantes.js';
@@ -16,7 +16,7 @@ export async function render(el, { id }) {
   el.innerHTML = `
     <a class="miga" href="/postulantes">← Postulantes</a>
     <div class="encabezado">
-      <div class="persona"><span class="avatar grande">${esc(iniciales(p))}</span>
+      <div class="persona"><span class="avatar grande" style="${colorAvatar(nombreCompleto(p))}">${esc(iniciales(p))}</span>
         <div><h1>${esc(nombreCompleto(p))}</h1>
         <p>${esc(p.profesion ?? 'Sin profesión registrada')} · Registrado el ${fecha(p.created_at)}</p></div></div>
       <div class="acciones">

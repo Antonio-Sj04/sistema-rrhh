@@ -23,6 +23,8 @@ function divisiones(max, cantidad = 4) {
   return lista;
 }
 
+let contadorGraficas = 0;
+
 /** Columna con extremo de datos redondeado y base recta. */
 function columna(x, y, w, h) {
   const r = Math.min(RADIO, h, w / 2);
@@ -110,7 +112,10 @@ function dibujarColumnas(contenedor, { titulo, categorias, series, formato = Str
   // Omite etiquetas del eje X si no caben
   const salto = Math.ceil(categorias.length / Math.max(1, Math.floor(plotAncho / 44)));
 
-  let html = '';
+  // Degradado vertical por serie (color pleno arriba, más suave en la base)
+  const idGrafica = `g${(contadorGraficas += 1)}`;
+  let html = `<defs>${series.map((s, j) => `<linearGradient id="${idGrafica}-${j}" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" style="stop-color:var(${s.color})"/><stop offset="1" style="stop-color:var(${s.color});stop-opacity:0.55"/></linearGradient>`).join('')}</defs>`;
   for (const t of ticks) {
     html += `<line class="viz-grid${t === 0 ? ' viz-base' : ''}" x1="${izq}" x2="${ancho - der}" y1="${y(t)}" y2="${y(t)}"/>`;
     html += `<text class="viz-eje" x="${izq - 8}" y="${y(t) + 4}" text-anchor="end">${esc(compacto.format(t))}</text>`;
@@ -121,7 +126,7 @@ function dibujarColumnas(contenedor, { titulo, categorias, series, formato = Str
       const v = s.valores[i];
       if (v > 0) {
         const alto = Math.max(1, (v / tope) * ALTO_PLOT);
-        html += `<path data-marca="${i}" fill="var(${s.color})" d="${columna(x0 + j * (grosor + 2), y(0) - alto, grosor, alto)}"/>`;
+        html += `<path data-marca="${i}" fill="url(#${idGrafica}-${j})" d="${columna(x0 + j * (grosor + 2), y(0) - alto, grosor, alto)}"/>`;
       }
     });
     // Se cuenta desde el final para que el mes más reciente siempre tenga etiqueta

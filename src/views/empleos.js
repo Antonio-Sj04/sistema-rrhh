@@ -3,6 +3,8 @@
 // La postulación es un formulario de 3 pasos cuyo avance se guarda en
 // sessionStorage: sobrevive a recargas, pero se borra al cerrar la pestaña.
 import { api } from '../api.js';
+import { LOGO, icono } from '../layout.js';
+import { selectorTema } from '../tema.js';
 import { cargando, esc, fecha, formularioHTML, leerFormulario, mensajeError, modal, moneda } from '../ui.js';
 
 const MAX_CV = 5 * 1024 * 1024;
@@ -22,18 +24,27 @@ const parrafos = (texto) =>
 export async function render(el) {
   el.innerHTML = `<div class="portal">
     <header class="portal-cabecera">
-      <div class="portal-marca"><span class="marca-logo">RH</span><span id="empresa">Portal de empleo</span></div>
-      <a href="/login" class="boton pequeno">Acceso personal</a>
+      <div class="marca">${LOGO}<div><div class="marca-nombre">Portal de empleo</div><div class="marca-empresa" id="empresa">Recursos Humanos</div></div></div>
+      <div class="acciones">${selectorTema()}<a href="/login" class="boton">Acceso personal</a></div>
     </header>
-    <section class="portal-hero">
-      <h1>Trabaja con nosotros</h1>
+    <section class="portal-hero fondo-marca">
+      <span class="pastilla oculto" id="plazas"></span>
+      <h1>Trabaja con nosotros<span id="en-empresa"></span></h1>
       <p id="subtitulo">Conoce nuestras vacantes y envía tu CV en minutos.</p>
+      <a class="boton boton-claro" href="#vacantes">Ver vacantes →</a>
     </section>
-    <main class="portal-lista" id="lista">${cargando()}</main>
+    <main class="portal-contenido" id="vacantes">
+      <div class="portal-titulo"><h2>Vacantes disponibles</h2><p class="texto-suave">Aplica a la posición que mejor se ajuste a tu perfil.</p></div>
+      <div class="portal-lista" id="lista">${cargando()}</div>
+    </main>
     <footer class="portal-pie">Tus datos se usan únicamente para procesos de selección.</footer>
   </div>`;
 
   const lista = el.querySelector('#lista');
+  el.querySelector('.boton-claro').addEventListener('click', (e) => {
+    e.preventDefault();
+    el.querySelector('#vacantes').scrollIntoView({ behavior: 'smooth' });
+  });
   let vacantes;
   let empresa;
   try {
@@ -46,8 +57,15 @@ export async function render(el) {
   }
   if (empresa) {
     el.querySelector('#empresa').textContent = empresa;
+    el.querySelector('#en-empresa').innerHTML = ` en <span class="resaltado">${esc(empresa)}</span>`;
     el.querySelector('#subtitulo').textContent = `Conoce las vacantes de ${empresa} y envía tu CV en minutos.`;
     document.title = `Empleos · ${empresa}`;
+  }
+  const totalPlazas = vacantes.reduce((s, v) => s + (v.plazas ?? 0), 0);
+  if (totalPlazas) {
+    const pastilla = el.querySelector('#plazas');
+    pastilla.innerHTML = `${icono('empleados')} ${totalPlazas} ${totalPlazas === 1 ? 'plaza abierta' : 'plazas abiertas'}`;
+    pastilla.classList.remove('oculto');
   }
   if (!vacantes.length) {
     lista.innerHTML = '<div class="tarjeta vacio">Por ahora no tenemos vacantes abiertas. ¡Vuelve pronto!</div>';
@@ -57,21 +75,20 @@ export async function render(el) {
   lista.innerHTML = vacantes
     .map(
       (v) => `<article class="tarjeta portal-vacante" id="v-${v.id}">
-        <div class="tarjeta-cuerpo">
-          <div class="portal-vacante-cabecera">
-            <div>
-              <h2>${esc(v.titulo)}</h2>
-              <div class="portal-meta">
-                ${v.departamento ? `<span>${esc(v.departamento)}</span>` : ''}
-                <span>${v.plazas} ${v.plazas === 1 ? 'plaza' : 'plazas'}</span>
-                ${v.salario ? `<span>${moneda(v.salario)} mensuales</span>` : ''}
-                ${v.fecha_cierre ? `<span>Cierra el ${fecha(v.fecha_cierre)}</span>` : ''}
-              </div>
-            </div>
-            <button type="button" class="primario" data-postular="${v.id}">${borrador(v.id) ? 'Continuar postulación' : 'Postularme'}</button>
-          </div>
-          ${v.descripcion ? `<div class="portal-texto">${parrafos(v.descripcion)}</div>` : ''}
-          ${v.requisitos ? `<h3>Requisitos</h3><div class="portal-texto">${parrafos(v.requisitos)}</div>` : ''}
+        <div class="portal-vacante-cabecera">
+          <span class="kpi-icono tono-indigo">${icono('vacantes')}</span>
+          <span class="badge badge-exito">${v.plazas} ${v.plazas === 1 ? 'plaza' : 'plazas'}</span>
+        </div>
+        <h2>${esc(v.titulo)}</h2>
+        ${v.descripcion ? `<div class="portal-texto">${parrafos(v.descripcion)}</div>` : ''}
+        <div class="portal-meta">
+          ${v.departamento ? `<span>${esc(v.departamento)}</span>` : ''}
+          ${v.fecha_cierre ? `<span>Cierra el ${fecha(v.fecha_cierre)}</span>` : ''}
+        </div>
+        ${v.requisitos ? `<details class="portal-requisitos"><summary>Ver requisitos</summary><div class="portal-texto">${parrafos(v.requisitos)}</div></details>` : ''}
+        <div class="portal-vacante-pie">
+          <div>${v.salario ? `<div class="portal-etiqueta">Salario mensual</div><div class="portal-salario">${moneda(v.salario)}</div>` : ''}</div>
+          <button type="button" class="primario" data-postular="${v.id}">${borrador(v.id) ? 'Continuar postulación' : 'Postular →'}</button>
         </div>
       </article>`,
     )
@@ -232,7 +249,7 @@ function postular(vacante, empresa, boton) {
       // POST /api/v1/publico/postulaciones (multipart/form-data)
       const r = await api('/publico/postulaciones', { metodo: 'POST', formulario: envio });
       borrarBorrador(vacante.id);
-      if (boton) boton.textContent = 'Postularme';
+      if (boton) boton.textContent = 'Postular →';
       cerrar();
       modal({
         titulo: r?.repetida ? 'Ya habíamos recibido tu postulación' : '¡Postulación enviada!',

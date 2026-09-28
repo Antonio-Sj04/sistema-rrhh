@@ -4,7 +4,7 @@ import { TIPOS_AUSENCIA } from '../catalogos.js';
 import { TIPOS_CONSTANCIA, generarConstancia } from '../constancias.js';
 import { sublista } from '../sublista.js';
 import { empresa, ok } from '../api.js';
-import { badge, esc, estrellas, etiqueta, fecha, iniciales, moneda, montarPestanas, nombreCompleto } from '../ui.js';
+import { badge, colorAvatar, esc, estrellas, etiqueta, fecha, iniciales, moneda, montarPestanas, nombreCompleto } from '../ui.js';
 import { mostrarRecibo } from './periodo.js';
 
 export async function render(el) {
@@ -19,7 +19,7 @@ export async function render(el) {
 
   el.innerHTML = `
     <div class="encabezado">
-      <div class="persona"><span class="avatar grande">${esc(iniciales(emp))}</span>
+      <div class="persona"><span class="avatar grande" style="${colorAvatar(nombreCompleto(emp))}">${esc(iniciales(emp))}</span>
         <div><h1>${esc(nombreCompleto(emp))}</h1>
         <p>${esc(emp.puesto?.nombre ?? '')} · ${esc(emp.departamento?.nombre ?? '')} · Desde ${fecha(emp.fecha_ingreso)}</p></div></div>
     </div>
