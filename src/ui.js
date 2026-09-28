@@ -109,7 +109,7 @@ export function tabla(columnas, filas, { vacio = 'No hay registros.', clicable =
   const cabecera = columnas.map((c) => `<th class="${c.clase ?? ''}">${esc(c.titulo)}</th>`).join('');
   const cuerpo = filas
     .map((f) => {
-      const contenidos = columnas.map((c) => (c.render ? c.render(f) : esc(f[c.campo] ?? '—')));
+      const contenidos = columnas.map((c) => String(c.render ? (c.render(f) ?? '') : esc(f[c.campo] ?? '—')));
       // En teléfono, la última celda que es solo una etiqueta de estado va en la esquina de la tarjeta
       const esquina = contenidos.findLastIndex((h, i) => i > 0 && /^<span class="badge[^>]*>[^<]*<\/span>$/.test(h.trim()));
       const celdas = columnas
