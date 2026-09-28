@@ -92,3 +92,31 @@ test('respuestas HTTP de la API', async () => {
   assert.equal(r.status, 404);
   assert.equal(r.headers.get('cache-control'), 'no-store');
 });
+
+test('token CSRF ligado a la sesión y cabecera Authorization: Bearer', async () => {
+  process.env.SUPABASE_URL ||= 'https://demo.supabase.co';
+  process.env.SUPABASE_ANON_KEY ||= 'clave-de-prueba';
+  const { exigirSesion, tokenCsrf } = await import('../server/sesion.js');
+  const jwt = (carga) => ['e30', Buffer.from(JSON.stringify(carga)).toString('base64url'), 'firma'].join('.');
+  const exp = Math.floor(Date.now() / 1000) + 3600;
+  const token = jwt({ sub: 'u1', session_id: 's1', exp });
+
+  assert.equal(tokenCsrf(token), tokenCsrf(jwt({ sub: 'u1', session_id: 's1', exp: exp + 60 }))); // no cambia al renovar
+  assert.notEqual(tokenCsrf(token), tokenCsrf(jwt({ sub: 'u1', session_id: 's2', exp })));
+
+  const pedir = (headers) => new Request('https://rrhh.test/api/v1/empleados', { method: 'POST', headers });
+  await assert.rejects(exigirSesion(pedir({ cookie: `rrhh_at=${token}` })), (e) => e.status === 403 && e.codigo === 'CSRF');
+  await assert.rejects(exigirSesion(pedir({ cookie: `rrhh_at=${token}`, 'x-csrf-token': 'falso' })), (e) => e.status === 403);
+  assert.equal((await exigirSesion(pedir({ cookie: `rrhh_at=${token}`, 'x-csrf-token': tokenCsrf(token) }))).token, token);
+  // Con Bearer no hay cookie que el navegador envíe solo: no aplica CSRF
+  assert.equal((await exigirSesion(pedir({ authorization: `Bearer ${token}` }))).token, token);
+  await assert.rejects(exigirSesion(pedir({ authorization: 'Bearer basura' })), (e) => e.status === 401);
+});
+
+test('sanitización en el cliente antes de enviar a la API', async () => {
+  const { sanearEntrada } = await import('../src/api.js');
+  assert.deepEqual(
+    sanearEntrada({ nombres: ' <b>Ana</b> ', notas: ['<script>x</script>ok'], password: ' <Clave1> ', salario: 5000 }),
+    { nombres: 'Ana', notas: ['xok'], password: ' <Clave1> ', salario: 5000 },
+  );
+});

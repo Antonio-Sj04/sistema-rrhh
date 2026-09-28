@@ -2,7 +2,7 @@
 // solo en cookies HttpOnly; el navegador nunca los recibe en el cuerpo.
 import { ErrorHttp, cookiesBorradas, cookiesDeSesion, json, leerJson } from '../http.js';
 import { CORREO, sanearTexto } from '../sanear.js';
-import { obtenerSesion, exigirSesion } from '../sesion.js';
+import { obtenerSesion, exigirSesion, tokenCsrf } from '../sesion.js';
 import { clienteAnonimo, clienteUsuario } from '../supabase.js';
 
 const TIPOS_ENLACE = ['invite', 'recovery', 'email_change', 'signup', 'magiclink'];
@@ -37,7 +37,8 @@ export async function manejarAuth(request, accion) {
         : 'Correo o contraseña incorrectos.');
     }
     const perfil = await perfilDe(data.session.access_token, data.user.id);
-    return json({ usuario: { id: data.user.id, email: data.user.email }, perfil }, 200, cookiesDeSesion(data.session, Boolean(recordar)));
+    return json({ usuario: { id: data.user.id, email: data.user.email }, perfil, csrf: tokenCsrf(data.session.access_token) }, 200,
+      cookiesDeSesion(data.session, Boolean(recordar)));
   }
 
   // GET /auth/sesion — ¿hay sesión? devuelve el perfil (y renueva cookies si hace falta)
@@ -48,7 +49,7 @@ export async function manejarAuth(request, accion) {
     if (!data?.user) return json({ usuario: null, perfil: null }, 200, cookiesBorradas());
     try {
       const perfil = await perfilDe(sesion.token, data.user.id);
-      return json({ usuario: { id: data.user.id, email: data.user.email }, perfil }, 200, sesion.cookies);
+      return json({ usuario: { id: data.user.id, email: data.user.email }, perfil, csrf: tokenCsrf(sesion.token) }, 200, sesion.cookies);
     } catch (e) {
       e.cookies = cookiesBorradas();
       throw e;

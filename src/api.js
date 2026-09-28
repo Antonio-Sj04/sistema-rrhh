@@ -10,6 +10,33 @@ export class ErrorApi extends Error {
   }
 }
 
+// Token anti-CSRF que entrega la API al iniciar sesión. Vive solo en memoria:
+// otro sitio no puede leerlo, así que no puede falsificar peticiones.
+let tokenCsrf = null;
+
+// Sanitización en el cliente (primera barrera; la API vuelve a sanear todo):
+// quita caracteres de control y etiquetas HTML y recorta espacios.
+const ETIQUETA_HTML = /<\/?[a-zA-Z!][^>]*>/g;
+const CONTROL = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g;
+const SIN_SANEAR = new Set(['password', 'token_hash']);
+
+export const sanearTexto = (texto) => String(texto).replace(CONTROL, '').replace(ETIQUETA_HTML, '').trim();
+
+export function sanearEntrada(valor, clave = '') {
+  if (typeof valor === 'string') return SIN_SANEAR.has(clave) ? valor : sanearTexto(valor);
+  if (Array.isArray(valor)) return valor.map((v) => sanearEntrada(v));
+  if (valor && typeof valor === 'object' && !(valor instanceof Blob)) {
+    return Object.fromEntries(Object.entries(valor).map(([k, v]) => [k, sanearEntrada(v, k)]));
+  }
+  return valor;
+}
+
+function sanearFormulario(formulario) {
+  const limpio = new FormData();
+  for (const [clave, valor] of formulario.entries()) limpio.append(clave, typeof valor === 'string' ? sanearTexto(valor) : valor);
+  return limpio;
+}
+
 /** Petición a la API. Lanza ErrorApi si la respuesta no es 2xx. */
 export async function api(ruta, { metodo = 'GET', cuerpo, formulario, parametros } = {}) {
   const url = new URL(`/api/v1${ruta}`, location.origin);
@@ -18,12 +45,13 @@ export async function api(ruta, { metodo = 'GET', cuerpo, formulario, parametros
   }
   // Cabecera exigida por la API contra CSRF (un sitio ajeno no puede enviarla)
   const headers = { 'X-Requested-With': 'fetch', Accept: 'application/json' };
+  if (tokenCsrf && metodo !== 'GET') headers['X-CSRF-Token'] = tokenCsrf;
   let body;
   if (formulario) {
-    body = formulario;
+    body = sanearFormulario(formulario);
   } else if (cuerpo !== undefined) {
     headers['Content-Type'] = 'application/json';
-    body = JSON.stringify(cuerpo);
+    body = JSON.stringify(sanearEntrada(cuerpo));
   }
 
   let respuesta;
@@ -33,6 +61,8 @@ export async function api(ruta, { metodo = 'GET', cuerpo, formulario, parametros
     throw new ErrorApi(0, 'RED', 'No hay conexión con el servidor.');
   }
   const datos = await respuesta.json().catch(() => null);
+  if (ruta.startsWith('/auth/') && datos && 'usuario' in datos) tokenCsrf = datos.csrf ?? null;
+  if (ruta === '/auth/logout') tokenCsrf = null;
   if (!respuesta.ok) {
     if (respuesta.status === 401 && !ruta.startsWith('/auth/')) {
       window.dispatchEvent(new CustomEvent('sesion-expirada'));

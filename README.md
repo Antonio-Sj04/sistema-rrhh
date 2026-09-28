@@ -12,12 +12,14 @@ Aplicación web SPA para la gestión de personal, nómina (Guatemala) y reclutam
 Navegador (SPA)  ──fetch──▶  API REST /api/v1 (Netlify Functions)  ──▶  Supabase
  History API                  · valida y sanea entradas                 · PostgreSQL + RLS
  localStorage: tema           · cookies HttpOnly/Secure/SameSite        · Auth (JWT)
- sessionStorage: borradores   · anti-CSRF (cabecera + Origin)           · Storage (CV, documentos)
+ sessionStorage: borradores   · anti-CSRF (token HMAC + Origin)         · Storage (CV, documentos)
  cookie de sesión (HttpOnly)  · SQL directo (reportes, JSONB)
 ```
 
 - **El navegador no tiene ninguna clave de Supabase.** Todo pasa por la API; la clave `service_role` y la conexión SQL solo existen como variables de entorno del servidor.
 - **Sesión:** la API inicia sesión en Supabase Auth y guarda los tokens en cookies `HttpOnly; Secure; SameSite=Strict; Path=/api`. JavaScript no puede leerlas (mitiga XSS) y no se envían desde otros sitios (mitiga CSRF). El token se renueva solo.
+- **Anti-CSRF:** además de `SameSite=Strict`, `/auth/login` y `/auth/sesion` entregan un token CSRF (HMAC del id de sesión) que la SPA guarda solo en memoria y envía en `X-CSRF-Token` en cada modificación.
+- **Sanitización en dos capas:** el cliente limpia el cuerpo antes de enviarlo (`src/api.js`) y la API vuelve a sanear y validar todo (`server/sanear.js`).
 - **RLS siempre activo:** la API consulta Supabase con el token del usuario; las consultas SQL directas adoptan su identidad (`set local role authenticated` + `request.jwt.claims`).
 - **History API:** URLs limpias (`/empleados/123`) con `pushState`/`replaceState`/`popstate`; `netlify.toml` sirve `index.html` en cualquier ruta.
 - **Almacenamiento web:** `localStorage` guarda el tema (claro/oscuro/sistema); `sessionStorage` guarda el borrador del formulario de postulación de 3 pasos; la sesión vive en cookies HttpOnly.
@@ -45,7 +47,7 @@ Navegador (SPA)  ──fetch──▶  API REST /api/v1 (Netlify Functions)  ─
 | GET | `/api/v1/publico/vacantes` | Vacantes publicadas (sin sesión) | 200 |
 | POST | `/api/v1/publico/postulaciones` | Postulación con CV (multipart) | 201, 400, 404, 413, 429 |
 
-Recursos disponibles: ver la lista blanca en [`server/recursos.js`](server/recursos.js). Errores: `{ "error": { "codigo", "mensaje" } }`. Toda petición que modifica datos exige la cabecera `X-Requested-With: fetch`.
+Recursos disponibles: ver la lista blanca en [`server/recursos.js`](server/recursos.js). Errores: `{ "error": { "codigo", "mensaje" } }`. Toda petición que modifica datos exige la cabecera `X-Requested-With: fetch` y, si usa la cookie de sesión, `X-CSRF-Token`. Para probar con Postman o curl se puede usar `Authorization: Bearer <JWT>` en lugar de la cookie.
 
 ## Arquitectura de datos
 
