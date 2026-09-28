@@ -23,7 +23,7 @@ Al abrir el proyecto en Claude Code, pide: **«Lee CONTINUAR.md y docs/contexto-
 | Rama `api-rest` | Cumple todos los requerimientos técnicos obligatorios: API REST propia, cookies HttpOnly, History API, SQL directo y almacenamiento web. **Aún no se ha fusionado a `main`.** |
 | Supabase | Proyecto `sistema-rrhh` (ref `oclvfhrehdkfglqsgckh`, São Paulo). Migraciones en `supabase/migrations/`. |
 | Correo | SMTP de Gmail configurado; plantillas en español en `supabase/templates/`. |
-| Documento Fase 1 | `docs/Fase1_Sistema_RRHH.docx` (28 páginas). Faltan los datos entre corchetes `[ ]`. Entrega: 27 de septiembre. |
+| Documento Fase 1 | `docs/Fase1_Sistema_RRHH.docx` y `.pdf` (31 páginas, equipo de 7 con tareas por integrante). Faltan los datos entre corchetes `[ ]`. Entrega: 27 de septiembre. |
 
 ## 4. Pasos pendientes
 1. **Netlify → Environment variables:** agregar como secretas `SUPABASE_SERVICE_ROLE_KEY` y `DATABASE_URL` (Transaction pooler, puerto 6543).
