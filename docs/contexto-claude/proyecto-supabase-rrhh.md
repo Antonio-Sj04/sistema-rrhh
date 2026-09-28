@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 2fafbf0d-f394-4761-8029-6c60d99dcea1
-  modified: 2026-09-25T19:57:09.244Z
+  modified: 2026-09-28T15:30:00.000Z
 ---
 
 HR system (Vanilla JS + Vite SPA, Guatemala payroll) runs on Supabase project `sistema-rrhh`, ref `oclvfhrehdkfglqsgckh`, region sa-east-1, free plan, org `voifzutxoogkeffemgss`. Created 2026-09-23 via the Supabase MCP connector.
@@ -18,7 +18,7 @@ Features delivered 2026-09-23 (all pushed): liquidación/indemnización, dashboa
 
 Email (2026-09-24): custom SMTP = Gmail antonio.samayoa004@gmail.com (smtp.gmail.com:465, app password entered by the user), sender name "Recursos Humanos". Supabase only allows editing auth email templates once custom SMTP is set; Spanish templates live in supabase/templates/ and are pasted by hand in Authentication → Emails.
 
-Class project (UMG): must meet "Requerimientos Técnicos Obligatorios" (own REST API, History API, HttpOnly/SameSite cookies, localStorage/sessionStorage, JSONB, direct SQL from backend, RLS, RBAC, XSS/CSRF). On 2026-09-25 branch `api-rest` rebuilt the app: API /api/v1 in Netlify Functions (server/, netlify/functions/api.mjs), browser has no Supabase keys, History API router. Needs Netlify secrets SUPABASE_SERVICE_ROLE_KEY and DATABASE_URL (user adds them). Phase 1 document (RACI, diagrams, DER, endpoints, OWASP) due 2026-09-27 — user asked to do it after technical compliance.
+Class project (UMG): must meet "Requerimientos Técnicos Obligatorios" (own REST API, History API, HttpOnly/SameSite cookies, localStorage/sessionStorage, JSONB, direct SQL from backend, RLS, RBAC, XSS/CSRF). API /api/v1 in Netlify Functions (server/, netlify/functions/api.mjs), browser has no Supabase keys, History API router, CSRF token (HMAC of session_id, header X-CSRF-Token) plus Authorization: Bearer support. Merged to main via PR #1 on 2026-09-28 and verified live in production; branch api-rest deleted locally. Netlify free plan cannot mark env vars secret, so SUPABASE_SERVICE_ROLE_KEY and DATABASE_URL are stored unmarked (All scopes). Deploy previews of this private repo require Netlify login, so Claude cannot open them — the user tests them. Phase 1 doc (docs/Fase1_Sistema_RRHH.docx/.pdf, 7-member team) generated from scratchpad generar.js; next: Fase 2 (Oct 10/17) and Fase 3 (Nov 7) per CONTINUAR.md.
 
 **Why:** dashboard-only settings (exposed schemas, auth config, users) cannot be changed through the MCP; the user does them by hand, guided step by step.
 **How to apply:** when deploying to production, the user must add the production URL to Auth → URL Configuration. Never ask for or use passwords or personal access tokens; guide the user through dashboard clicks instead.
