@@ -1,6 +1,6 @@
 import { obtenerSesion, tieneRol } from '../auth.js';
 import { TIPOS_AUSENCIA } from '../catalogos.js';
-import { empresa, ok } from '../supabase.js';
+import { empresa, ok } from '../api.js';
 import { abrirFormulario, badge, esc, etiqueta, fecha, mostrarError, nombreCompleto, opciones, persona, tabla, toast } from '../ui.js';
 
 export async function render(el) {

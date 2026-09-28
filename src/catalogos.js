@@ -1,5 +1,5 @@
 // Catálogos y definiciones de formularios compartidos entre vistas.
-import { empresa, ok } from './supabase.js';
+import { empresa, ok } from './api.js';
 import { nombreCompleto, opciones } from './ui.js';
 
 export async function cargarCatalogos() {

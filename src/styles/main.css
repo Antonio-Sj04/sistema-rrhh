@@ -28,8 +28,10 @@
   color-scheme: light;
 }
 
+/* Modo oscuro: por preferencia del sistema (salvo que el usuario eligió
+   "claro") o por elección guardada en localStorage (data-theme="dark"). */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     --primario: #5b7fff;
     --primario-hover: #7a97ff;
     --primario-suave: #1d2748;
@@ -46,8 +48,37 @@
     --info-suave: #10283a;
     --neutro-suave: #232a40;
     --sombra: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.25);
+    --viz-serie-1: #3987e5;
+    --viz-serie-2: #d95926;
+    --viz-grid: #232b43;
+    --viz-base: #3a4463;
+    --viz-muted: #8a93ad;
     color-scheme: dark;
   }
+}
+:root[data-theme='dark'] {
+  --primario: #5b7fff;
+  --primario-hover: #7a97ff;
+  --primario-suave: #1d2748;
+  --fondo: #0e1322;
+  --superficie: #161c2e;
+  --superficie-2: #1b2236;
+  --borde: #2a3350;
+  --texto: #e6e9f2;
+  --texto-suave: #98a2bf;
+  --lateral: #0a0f1c;
+  --exito-suave: #12321f;
+  --alerta-suave: #3a2c0c;
+  --peligro-suave: #3e1717;
+  --info-suave: #10283a;
+  --neutro-suave: #232a40;
+  --sombra: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.25);
+  --viz-serie-1: #3987e5;
+  --viz-serie-2: #d95926;
+  --viz-grid: #232b43;
+  --viz-base: #3a4463;
+  --viz-muted: #8a93ad;
+  color-scheme: dark;
 }
 
 *,
@@ -592,6 +623,26 @@ tfoot td { font-weight: 700; background: var(--superficie-2); border-top: 2px so
 .portal-vacante h3 { margin-top: 16px; font-size: 14px; }
 .portal-texto p { margin: 8px 0 0; color: var(--texto-suave); }
 .portal-pie { text-align: center; color: var(--texto-suave); font-size: 12px; padding: 20px 16px; }
+.pasos {
+  display: flex;
+  gap: 8px;
+  list-style: none;
+  padding: 0;
+  margin: 0 0 20px;
+  counter-reset: paso;
+}
+.pasos li {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--texto-suave);
+  padding-top: 8px;
+  border-top: 3px solid var(--borde);
+  counter-increment: paso;
+}
+.pasos li::before { content: counter(paso) '. '; }
+.pasos li.hecho { border-top-color: var(--exito); color: var(--texto); }
+.pasos li.actual { border-top-color: var(--primario); color: var(--primario); }
 .portal-trampa { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
 @media (max-width: 600px) {
   .portal-hero { padding: 36px 16px; }
@@ -649,15 +700,6 @@ tfoot td { font-weight: 700; background: var(--superficie-2); border-top: 2px so
   --viz-grid: #e8ebf2;
   --viz-base: #c3c8d6;
   --viz-muted: #7c849b;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --viz-serie-1: #3987e5;
-    --viz-serie-2: #d95926;
-    --viz-grid: #232b43;
-    --viz-base: #3a4463;
-    --viz-muted: #8a93ad;
-  }
 }
 .rejilla-graficas { grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr)); margin-bottom: 16px; }
 .viz-lienzo { position: relative; min-height: 120px; }

@@ -1,6 +1,6 @@
 // Baja de empleados con cálculo de liquidación (Guatemala).
 import { MOTIVOS_BAJA, MOTIVOS_CON_INDEMNIZACION, calcularLiquidacion, ultimoAniversario, vacacionesPendientes } from './lib/nomina-gt.js';
-import { empresa, ok } from './supabase.js';
+import { empresa, ok } from './api.js';
 import { abrirFormulario, esc, fecha, hoy, leerFormulario, modal, moneda, nombreCompleto } from './ui.js';
 
 const textoMotivo = (m) => MOTIVOS_BAJA.find(([v]) => v === m)?.[1] ?? m;

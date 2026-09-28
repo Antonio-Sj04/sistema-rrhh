@@ -1,5 +1,7 @@
-// Router SPA basado en hash (#/ruta). Funciona en cualquier hosting estático
-// sin configurar reescrituras en el servidor.
+// Router SPA con la History API: URLs limpias (/empleados/123), navegación con
+// pushState/replaceState y el evento popstate para los botones Atrás/Adelante,
+// sin recargar la página. El servidor (netlify.toml) sirve index.html en
+// cualquier ruta para que las URLs se puedan abrir o recargar directamente.
 import { inicioPorRol, obtenerPerfil, obtenerSesion } from './auth.js';
 import { montarLayout, marcarActivo } from './layout.js';
 import { cargando, esc, mensajeError } from './ui.js';
@@ -27,11 +29,31 @@ export const RUTAS = [
   { ruta: '/auditoria', vista: () => import('./views/auditoria.js'), roles: ['admin'] },
 ];
 
-export const navegar = (ruta) => {
-  location.hash = `#${ruta}`;
-};
+/**
+ * Navega sin recargar: agrega una entrada al historial (pushState) o, con
+ * reemplazar, sustituye la actual (replaceState; p. ej. en redirecciones).
+ */
+export function navegar(ruta, { reemplazar = false, estado = {} } = {}) {
+  const destino = new URL(ruta, location.origin);
+  const actual = location.pathname + location.search;
+  if (destino.pathname + destino.search !== actual) {
+    history[reemplazar ? 'replaceState' : 'pushState'](estado, '', destino.pathname + destino.search + destino.hash);
+  }
+  resolver();
+}
 
-const rutaActual = () => location.hash.replace(/^#/, '').split('?')[0] || '/';
+const rutaActual = () => location.pathname.replace(/\/+$/, '') || '/';
+
+/** Intercepta los clics en enlaces internos para navegar sin recargar. */
+function interceptarEnlaces(e) {
+  if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+  const a = e.target.closest('a[href]');
+  if (!a || a.target || a.hasAttribute('download')) return;
+  const url = new URL(a.href, location.href);
+  if (url.origin !== location.origin || url.pathname.startsWith('/api/')) return;
+  e.preventDefault();
+  navegar(url.pathname + url.search);
+}
 
 function coincidir(camino) {
   for (const r of RUTAS) {
@@ -80,12 +102,13 @@ async function resolver() {
   const sesion = obtenerSesion();
   const perfil = obtenerPerfil();
 
-  if (!destino) return navegar(sesion ? inicioPorRol() : '/login');
+  const redirigir = (ruta) => navegar(ruta, { reemplazar: true });
+  if (!destino) return redirigir(sesion ? inicioPorRol() : '/login');
   if (destino.abierta) destino.sinLayout = true;
-  else if (!destino.publica && !sesion) return navegar('/login');
-  if (destino.publica && sesion && perfil) return navegar(inicioPorRol());
-  if (!destino.publica && !destino.sinLayout && !perfil) return navegar('/login');
-  if (destino.roles && !destino.roles.includes(perfil.rol)) return navegar(inicioPorRol());
+  else if (!destino.publica && !sesion) return redirigir('/login');
+  if (destino.publica && sesion && perfil) return redirigir(inicioPorRol());
+  if (!destino.publica && !destino.sinLayout && !perfil) return redirigir('/login');
+  if (destino.roles && !destino.roles.includes(perfil.rol)) return redirigir(inicioPorRol());
 
   const app = document.getElementById('app');
   let contenedor;
@@ -112,7 +135,8 @@ async function resolver() {
     console.error(error);
     contenedor.innerHTML = `<div class="tarjeta"><div class="vacio">
       <h2>No se pudo cargar esta sección</h2><p>Revisa tu conexión a internet.</p>
-      <button type="button" class="primario" onclick="location.reload()">Reintentar</button></div></div>`;
+      <button type="button" class="primario" data-reintentar>Reintentar</button></div></div>`;
+    contenedor.querySelector('[data-reintentar]').addEventListener('click', () => location.reload());
     return;
   }
   olvidarRecarga();
@@ -130,7 +154,8 @@ async function resolver() {
 }
 
 export function iniciarRouter() {
-  window.addEventListener('hashchange', resolver);
+  window.addEventListener('popstate', resolver); // botones Atrás/Adelante del navegador
+  document.addEventListener('click', interceptarEnlaces);
   resolver();
 }
 

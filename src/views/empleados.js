@@ -1,7 +1,7 @@
 import { tieneRol } from '../auth.js';
 import { camposEmpleado, cargarCatalogos } from '../catalogos.js';
 import { navegar } from '../router.js';
-import { empresa, ok } from '../supabase.js';
+import { empresa, ok } from '../api.js';
 import {
   abrirFormulario, badge, descargarCSV, esc, fecha, hoy, moneda, nombreCompleto, persona, porId, tabla, toast,
 } from '../ui.js';

@@ -2,7 +2,7 @@
 import { tieneRol } from '../auth.js';
 import { ETAPAS, cargarCatalogos } from '../catalogos.js';
 import { navegar } from '../router.js';
-import { ok, reclutamiento, supabase } from '../supabase.js';
+import { api, ok, reclutamiento } from '../api.js';
 import {
   abrirFormulario, badge, esc, estrellas, etiqueta, fecha, hoy, moneda, mostrarError, nombreCompleto, opciones, tabla, toast,
 } from '../ui.js';
@@ -12,11 +12,11 @@ export async function render(el) {
   const vacantes = await ok(reclutamiento('vacantes').select('*').neq('estado', 'cerrada').order('titulo'));
   if (!vacantes.length) {
     el.innerHTML = `<div class="encabezado"><div><h1>Proceso de selección</h1></div></div>
-      <div class="tarjeta"><div class="vacio">No hay vacantes abiertas. <a href="#/vacantes">Crea una vacante</a> para comenzar.</div></div>`;
+      <div class="tarjeta"><div class="vacio">No hay vacantes abiertas. <a href="/vacantes">Crea una vacante</a> para comenzar.</div></div>`;
     return;
   }
 
-  const solicitada = new URLSearchParams(location.hash.split('?')[1]).get('vacante');
+  const solicitada = new URLSearchParams(location.search).get('vacante');
   let vacanteId = vacantes.some((v) => v.id === solicitada) ? solicitada : vacantes[0].id;
 
   el.innerHTML = `
@@ -50,7 +50,7 @@ export async function render(el) {
           ${ETAPAS.map(([v, t]) => `<option value="${v}" ${v === po.etapa ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>`
       : '';
     return `<div class="ficha" draggable="${puedeEditar}" data-id="${po.id}">
-      <div class="ficha-nombre"><a href="#/postulantes/${p.id}">${esc(nombreCompleto(p))}</a></div>
+      <div class="ficha-nombre"><a href="/postulantes/${p.id}">${esc(nombreCompleto(p))}</a></div>
       <div class="ficha-meta">${esc(p.profesion ?? '')}${p.anios_experiencia != null ? ` · ${p.anios_experiencia} años` : ''}</div>
       ${p.pretension_salarial ? `<div class="ficha-meta">Pretensión: ${moneda(p.pretension_salarial)}</div>` : ''}
       ${po.calificacion ? `<div>${estrellas(po.calificacion)}</div>` : ''}
@@ -138,16 +138,10 @@ export async function render(el) {
       },
       extra: '<p class="texto-suave" style="margin-top:14px">Se creará el empleado en la base de la empresa con los datos del postulante.</p>',
       alGuardar: async (d) => {
-        const { data, error } = await supabase.schema('reclutamiento').rpc('contratar', {
-          p_postulacion: po.id,
-          p_puesto: d.puesto_id,
-          p_departamento: d.departamento_id,
-          p_salario: d.salario,
-          p_fecha_ingreso: d.fecha_ingreso,
-        });
-        if (error) throw error;
+        // POST /api/v1/postulaciones/{id}/contratar
+        const { datos } = await api(`/postulaciones/${po.id}/contratar`, { metodo: 'POST', cuerpo: d });
         toast('¡Contratado! Se creó el expediente del empleado.');
-        navegar(`/empleados/${data}`);
+        navegar(`/empleados/${datos.empleado_id}`);
       },
     });
   }
@@ -237,7 +231,7 @@ export async function render(el) {
 
   el.querySelector('#vacante').addEventListener('change', (e) => {
     vacanteId = e.target.value;
-    history.replaceState(null, '', `#/proceso?vacante=${vacanteId}`);
+    history.replaceState(history.state, '', `/proceso?vacante=${vacanteId}`);
     cargar().catch(mostrarError);
   });
 

@@ -1,7 +1,7 @@
 import { tieneRol } from '../auth.js';
 import { calcularReciboMensual, calcularReciboPrestacion, diasEntre } from '../lib/nomina-gt.js';
 import { navegar, recargarVista } from '../router.js';
-import { empresa, ok } from '../supabase.js';
+import { empresa, ok } from '../api.js';
 import {
   abrirFormulario, badge, confirmar, descargarCSV, esc, fecha, modal, moneda, mostrarError, nombreCompleto, persona, tabla, toast,
 } from '../ui.js';
@@ -56,7 +56,7 @@ export async function render(el, { id }) {
     : '';
 
   el.innerHTML = `
-    <a class="miga" href="#/nomina">← Nómina</a>
+    <a class="miga" href="/nomina">← Nómina</a>
     <div class="encabezado">
       <div><h1>${esc(periodo.nombre)} ${badge(periodo.estado)}</h1>
         <p>Del ${fecha(periodo.fecha_inicio)} al ${fecha(periodo.fecha_fin)} · Pago: ${fecha(periodo.fecha_pago)}</p></div>

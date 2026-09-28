@@ -1,47 +1,57 @@
-import { empresa, ok, supabase } from '../supabase.js';
+// Bitácora: GET /api/v1/reportes/bitacora (SQL directo sobre las columnas
+// JSONB "antes" y "despues" de empresa.auditoria).
+import { api, ok, recurso } from '../api.js';
 import { esc, etiqueta, fecha, modal, porId, tabla } from '../ui.js';
 
 const OPERACIONES = { INSERT: 'Creación', UPDATE: 'Modificación', DELETE: 'Eliminación' };
+const TABLAS = ['empleados', 'contratos', 'periodos_nomina', 'parametros_nomina', 'liquidaciones', 'postulantes', 'antecedentes', 'perfiles', 'usuarios'];
+
+const valorTexto = (v) => (v == null ? '—' : typeof v === 'object' ? JSON.stringify(v) : String(v));
 
 export async function render(el) {
   el.innerHTML = `
     <div class="encabezado"><div><h1>Bitácora de auditoría</h1>
       <p>Registro de cambios en expedientes, contratos, nómina, postulantes y usuarios.</p></div></div>
     <div class="tarjeta">
-      <div class="filtros">
-        <select id="f-tabla"><option value="">Todas las tablas</option>
-          ${['empleados', 'contratos', 'periodos_nomina', 'parametros_nomina', 'liquidaciones', 'postulantes', 'antecedentes', 'perfiles', 'usuarios']
-            .map((t) => `<option value="${t}">${esc(etiqueta(t))}</option>`).join('')}</select>
-        <select id="f-op"><option value="">Todas las operaciones</option>
+      <form class="filtros" id="filtros">
+        <input type="search" name="buscar" placeholder="Buscar dentro de los registros (nombre, DPI, correo…)" maxlength="80" />
+        <select name="tabla"><option value="">Todas las tablas</option>
+          ${TABLAS.map((t) => `<option value="${t}">${esc(etiqueta(t))}</option>`).join('')}</select>
+        <select name="operacion"><option value="">Todas las operaciones</option>
           ${Object.entries(OPERACIONES).map(([v, t]) => `<option value="${v}">${t}</option>`).join('')}</select>
-      </div>
+      </form>
       <div id="lista"></div>
+      <p class="texto-suave" id="origen" style="padding:0 20px 14px;font-size:12px"></p>
     </div>`;
 
-  const perfiles = porId(await ok(supabase.from('perfiles').select('id, nombre, email')));
+  const perfiles = porId(await ok(recurso('perfiles').select('id, nombre, email')));
+  const form = el.querySelector('#filtros');
   const lista = el.querySelector('#lista');
   let registros = [];
 
   async function cargar() {
-    let q = empresa('auditoria').select('*').order('fecha', { ascending: false }).limit(200);
-    const t = el.querySelector('#f-tabla').value;
-    const o = el.querySelector('#f-op').value;
-    if (t) q = q.eq('tabla', t);
-    if (o) q = q.eq('operacion', o);
-    registros = await ok(q);
+    const f = new FormData(form);
+    const r = await api('/reportes/bitacora', {
+      parametros: { buscar: f.get('buscar'), tabla: f.get('tabla'), operacion: f.get('operacion'), limite: 200 },
+    });
+    registros = r.datos;
+    el.querySelector('#origen').textContent = r.origen === 'sql'
+      ? 'Consulta SQL directa a PostgreSQL con búsqueda en columnas JSONB.'
+      : 'Consulta mediante la API de datos.';
     lista.innerHTML = tabla(
       [
-        { titulo: 'Fecha', render: (r) => fecha(r.fecha, true) },
-        { titulo: 'Usuario', render: (r) => esc(perfiles[r.usuario_id]?.nombre ?? perfiles[r.usuario_id]?.email ?? 'Sistema') },
-        { titulo: 'Operación', render: (r) => esc(OPERACIONES[r.operacion]) },
-        { titulo: 'Tabla', render: (r) => esc(`${r.esquema}.${r.tabla}`) },
+        { titulo: 'Fecha', render: (x) => fecha(x.fecha, true) },
+        { titulo: 'Usuario', render: (x) => esc(perfiles[x.usuario_id]?.nombre ?? perfiles[x.usuario_id]?.email ?? (x.usuario_id ? 'Usuario eliminado' : 'Sistema')) },
+        { titulo: 'Operación', render: (x) => esc(OPERACIONES[x.operacion]) },
+        { titulo: 'Tabla', render: (x) => esc(`${x.esquema}.${x.tabla}`) },
         {
           titulo: 'Registro',
-          render: (r) => (r.tabla === 'usuarios' ? esc(r.antes?.email ?? '') : `<code>${esc(r.registro_id?.slice(0, 8))}</code>`),
+          render: (x) => (x.tabla === 'usuarios' ? esc(x.antes?.email ?? '') : esc(x.despues?.nombres ?? x.antes?.nombres ?? x.despues?.nombre ?? x.registro_id?.slice(0, 8) ?? '')),
         },
+        { titulo: 'Campos modificados', render: (x) => esc(x.operacion === 'UPDATE' ? x.campos_cambiados.filter((c) => c !== 'updated_at').join(', ') : '—') },
       ],
       registros,
-      { clicable: true, vacio: 'Sin movimientos registrados.' },
+      { clicable: true, vacio: 'Sin movimientos con esos filtros.' },
     );
   }
 
@@ -49,17 +59,14 @@ export async function render(el) {
     const fila = e.target.closest('tr[data-id]');
     const r = fila && registros.find((x) => String(x.id) === fila.dataset.id);
     if (!r) return;
-    // Muestra solo los campos que cambiaron
-    const claves = [...new Set([...Object.keys(r.antes ?? {}), ...Object.keys(r.despues ?? {})])].filter(
-      (k) => JSON.stringify(r.antes?.[k]) !== JSON.stringify(r.despues?.[k]),
-    );
+    const claves = r.operacion === 'UPDATE' ? r.campos_cambiados : Object.keys(r.despues ?? r.antes ?? {});
     modal({
       titulo: `${OPERACIONES[r.operacion]} en ${r.tabla}`,
       contenido: tabla(
         [
           { titulo: 'Campo', campo: 'campo' },
-          { titulo: 'Antes', render: (f) => esc(f.antes ?? '—') },
-          { titulo: 'Después', render: (f) => esc(f.despues ?? '—') },
+          { titulo: 'Antes', render: (f) => esc(valorTexto(f.antes)) },
+          { titulo: 'Después', render: (f) => esc(valorTexto(f.despues)) },
         ],
         claves.map((k) => ({ campo: k, antes: r.antes?.[k], despues: r.despues?.[k] })),
         { vacio: 'Sin diferencias.' },
@@ -67,7 +74,11 @@ export async function render(el) {
     });
   });
 
-  el.querySelector('#f-tabla').addEventListener('change', cargar);
-  el.querySelector('#f-op').addEventListener('change', cargar);
+  let espera;
+  form.addEventListener('input', () => {
+    clearTimeout(espera);
+    espera = setTimeout(() => cargar().catch(() => {}), 350);
+  });
+  form.addEventListener('submit', (e) => e.preventDefault());
   await cargar();
 }

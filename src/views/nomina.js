@@ -1,7 +1,7 @@
 import { tieneRol } from '../auth.js';
 import { periodoPrestacion } from '../lib/nomina-gt.js';
 import { navegar } from '../router.js';
-import { empresa, ok } from '../supabase.js';
+import { empresa, ok } from '../api.js';
 import { abrirFormulario, badge, esc, fecha, moneda, mostrarError, tabla, toast } from '../ui.js';
 
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];

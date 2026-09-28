@@ -1,5 +1,5 @@
 import { cargarCatalogos } from '../catalogos.js';
-import { empresa, ok } from '../supabase.js';
+import { empresa, ok } from '../api.js';
 import { abrirFormulario, confirmar, esc, moneda, mostrarError, nombreCompleto, opciones, porId, tabla, toast } from '../ui.js';
 
 export async function render(el) {

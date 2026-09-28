@@ -1,7 +1,7 @@
 import { tieneRol } from '../auth.js';
 import { cargarCatalogos } from '../catalogos.js';
 import { navegar } from '../router.js';
-import { ok, reclutamiento } from '../supabase.js';
+import { ok, reclutamiento } from '../api.js';
 import { abrirFormulario, badge, esc, fecha, hoy, moneda, mostrarError, opciones, porId, tabla, toast } from '../ui.js';
 
 export async function render(el) {
@@ -16,7 +16,7 @@ export async function render(el) {
     <div class="encabezado">
       <div><h1>Vacantes</h1><p>Plazas abiertas y su avance en el proceso de selección.</p></div>
       <div class="acciones">
-        <a class="boton" href="#/empleos" target="_blank" rel="noopener">Ver portal público ↗</a>
+        <a class="boton" href="/empleos" target="_blank" rel="noopener">Ver portal público ↗</a>
         ${puedeEditar ? '<button type="button" class="primario" id="nueva">+ Nueva vacante</button>' : ''}
       </div>
     </div>
@@ -75,7 +75,7 @@ export async function render(el) {
   el.querySelector('#lista').addEventListener('click', (e) => {
     const b = e.target.closest('[data-editar], [data-proceso], [data-enlace]');
     if (b?.dataset.enlace) {
-      const enlace = `${location.origin}${location.pathname}#/empleos?vacante=${b.dataset.enlace}`;
+      const enlace = `${location.origin}/empleos?vacante=${b.dataset.enlace}`;
       navigator.clipboard.writeText(enlace).then(
         () => toast('Enlace copiado. Compártelo en redes sociales o bolsas de empleo.'),
         () => toast(enlace),

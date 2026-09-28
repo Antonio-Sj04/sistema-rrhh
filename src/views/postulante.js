@@ -2,7 +2,7 @@ import { tieneRol } from '../auth.js';
 import { ETAPAS } from '../catalogos.js';
 import { navegar, recargarVista } from '../router.js';
 import { botonArchivo, sublista } from '../sublista.js';
-import { empresa, ok, reclutamiento, subirArchivo, supabase } from '../supabase.js';
+import { eliminarArchivo, eliminarCarpeta, empresa, ok, reclutamiento, subirArchivo } from '../api.js';
 import {
   abrirFormulario, badge, confirmar, esc, estrellas, etiqueta, fecha, hoy, iniciales, moneda, montarPestanas,
   mostrarError, nombreCompleto, opciones, toast,
@@ -14,7 +14,7 @@ export async function render(el, { id }) {
   const p = await ok(reclutamiento('postulantes').select('*').eq('id', id).single());
 
   el.innerHTML = `
-    <a class="miga" href="#/postulantes">← Postulantes</a>
+    <a class="miga" href="/postulantes">← Postulantes</a>
     <div class="encabezado">
       <div class="persona"><span class="avatar grande">${esc(iniciales(p))}</span>
         <div><h1>${esc(nombreCompleto(p))}</h1>
@@ -105,7 +105,7 @@ export async function render(el, { id }) {
             await insertar('antecedentes')({ ...datos, documento_ruta });
           },
           eliminar: async (a) => {
-            if (a.documento_ruta) await supabase.storage.from('cvs').remove([a.documento_ruta]);
+            if (a.documento_ruta) await eliminarArchivo('cvs', a.documento_ruta);
             await borrar('antecedentes')(a);
           },
           vacio: 'Sin antecedentes registrados.',
@@ -216,7 +216,7 @@ export async function render(el, { id }) {
       alGuardar: async (_, form) => {
         const ruta = await subirArchivo('cvs', id, form.cv.files[0]);
         await ok(reclutamiento('postulantes').update({ cv_ruta: ruta }).eq('id', id));
-        if (p.cv_ruta) await supabase.storage.from('cvs').remove([p.cv_ruta]);
+        if (p.cv_ruta) await eliminarArchivo('cvs', p.cv_ruta);
         toast('CV actualizado.');
         recargarVista();
       },
@@ -230,13 +230,7 @@ export async function render(el, { id }) {
       : 'Se eliminarán todos sus datos, CV y antecedentes. Esta acción no se puede deshacer. ¿Continuar?';
     if (!(await confirmar(aviso, { textoAceptar: 'Eliminar', peligro: true }))) return;
     try {
-      const { data: archivos } = await supabase.storage.from('cvs').list(id);
-      const { data: docs } = await supabase.storage.from('cvs').list(`${id}/antecedentes`);
-      const rutas = [
-        ...(archivos ?? []).filter((a) => a.id).map((a) => `${id}/${a.name}`),
-        ...(docs ?? []).map((a) => `${id}/antecedentes/${a.name}`),
-      ];
-      if (rutas.length) await supabase.storage.from('cvs').remove(rutas);
+      await eliminarCarpeta('cvs', id); // CV y antecedentes del postulante
       await ok(reclutamiento('postulantes').delete().eq('id', id));
       toast('Postulante eliminado.');
       navegar('/postulantes');

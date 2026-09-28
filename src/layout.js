@@ -1,4 +1,6 @@
 import { cerrarSesion, obtenerPerfil } from './auth.js';
+import { navegar } from './router.js';
+import { botonTema } from './tema.js';
 import { confirmar, esc, etiqueta, toast } from './ui.js';
 
 const ICONOS = {
@@ -60,7 +62,7 @@ export function montarLayout(app) {
     .map((m) =>
       m.seccion
         ? `<div class="menu-seccion">${m.seccion}</div>`
-        : `<a href="#${m.ruta}" data-ruta="${m.ruta}">${icono(m.icono)}<span>${m.texto}</span></a>`,
+        : `<a href="${m.ruta}" data-ruta="${m.ruta}">${icono(m.icono)}<span>${m.texto}</span></a>`,
     )
     .join('');
 
@@ -73,6 +75,7 @@ export function montarLayout(app) {
         <div class="usuario-rol">${esc(etiqueta(perfil.rol))}</div>
         <button type="button" data-salir>Cerrar sesión</button>
         <button type="button" class="salir-todos" data-salir-todos>Cerrar en todos mis dispositivos</button>
+        ${botonTema('salir-todos')}
       </div>
     </aside>
     <div class="principal">
@@ -95,7 +98,7 @@ export function montarLayout(app) {
     if (todos && !(await confirmar('Se cerrará tu sesión aquí y en tus otros dispositivos (computadora, teléfono). En los otros puede tardar hasta una hora en surtir efecto. ¿Continuar?', { textoAceptar: 'Cerrar en todos' }))) return;
     await cerrarSesion(todos);
     toast(todos ? 'Sesión cerrada en todos tus dispositivos.' : 'Sesión cerrada.');
-    location.hash = '#/login';
+    navegar('/login', { reemplazar: true });
   };
   shell.querySelectorAll('[data-salir]').forEach((b) => b.addEventListener('click', () => salir(false)));
   shell.querySelector('[data-salir-todos]').addEventListener('click', () => salir(true));
