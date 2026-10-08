@@ -3,7 +3,7 @@
 import { ErrorHttp, cookiesBorradas, cookiesDeSesion, json, leerJson } from '../http.js';
 import { CORREO, sanearTexto } from '../sanear.js';
 import { obtenerSesion, exigirSesion, tokenCsrf } from '../sesion.js';
-import { clienteAnonimo, clienteUsuario } from '../supabase.js';
+import { clienteAnonimo, clienteUsuario, config } from '../supabase.js';
 
 const TIPOS_ENLACE = ['invite', 'recovery', 'email_change', 'signup', 'magiclink'];
 
@@ -20,6 +20,34 @@ async function perfilDe(token, userId) {
   if (error) throw new ErrorHttp(403, 'SIN_PERFIL', 'Tu usuario no tiene perfil en el sistema.');
   if (!data.activo) throw new ErrorHttp(403, 'INACTIVO', 'Tu usuario está desactivado. Contacta al administrador.');
   return data;
+}
+
+/**
+ * Cambia la contraseña del usuario dueño del token llamando a Supabase Auth
+ * (PUT /auth/v1/user). No se usa auth.updateUser() de supabase-js porque exige
+ * una sesión guardada dentro de la librería, y aquí la sesión vive en cookies.
+ */
+async function cambiarPassword(token, password) {
+  const respuesta = await fetch(`${config.url}/auth/v1/user`, {
+    method: 'PUT',
+    headers: { apikey: config.clavePublica, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password }),
+  });
+  if (respuesta.ok) return;
+  const error = await respuesta.json().catch(() => ({}));
+  const codigo = error.error_code ?? error.code ?? '';
+  const detalle = error.msg ?? error.message ?? '';
+  if (codigo === 'same_password' || /different/i.test(detalle)) {
+    throw new ErrorHttp(400, 'PASSWORD', 'La nueva contraseña debe ser distinta de la anterior.');
+  }
+  if (codigo === 'weak_password') {
+    throw new ErrorHttp(400, 'PASSWORD_DEBIL', 'La contraseña no cumple los requisitos de seguridad.');
+  }
+  if (respuesta.status === 401 || respuesta.status === 403) {
+    throw new ErrorHttp(401, 'NO_AUTENTICADO', 'El enlace expiró. Solicita uno nuevo desde «¿Olvidaste tu contraseña?».');
+  }
+  console.error('Supabase Auth rechazó el cambio de contraseña:', respuesta.status, codigo, detalle);
+  throw new ErrorHttp(400, 'PASSWORD', 'No se pudo guardar la contraseña. Inténtalo de nuevo.');
 }
 
 export async function manejarAuth(request, accion) {
@@ -91,12 +119,7 @@ export async function manejarAuth(request, accion) {
   if (accion === 'password' && request.method === 'PUT') {
     const sesion = await exigirSesion(request);
     const { password } = await leerJson(request);
-    const { error } = await sesion.db.auth.updateUser({ password: validarPassword(password) });
-    if (error) {
-      throw new ErrorHttp(400, 'PASSWORD', /different/i.test(error.message)
-        ? 'La nueva contraseña debe ser distinta de la anterior.'
-        : 'La contraseña no cumple los requisitos de seguridad.');
-    }
+    await cambiarPassword(sesion.token, validarPassword(password));
     return json({ ok: true }, 200, sesion.cookies);
   }
 
