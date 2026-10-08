@@ -44,6 +44,8 @@ export async function manejarUsuarios(request, id) {
 
     const { data: perfil } = await admin.from('perfiles').select('*').eq('id', id).maybeSingle();
     if (!perfil) throw new ErrorHttp(404, 'NO_ENCONTRADO', 'El usuario no existe.');
+    // La base de datos también lo impide (trigger proteger_superadmin); aquí solo se da un mensaje claro
+    if (perfil.protegido) throw new ErrorHttp(403, 'PROTEGIDO', 'Este usuario es superadministrador y no se puede eliminar.');
     const { error } = await admin.auth.admin.deleteUser(id);
     if (error) throw new ErrorHttp(400, 'ELIMINAR', error.message);
 
