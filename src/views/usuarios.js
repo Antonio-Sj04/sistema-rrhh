@@ -26,16 +26,19 @@ export async function render(el) {
     <div class="tarjeta" id="lista">${tabla(
       [
         { titulo: 'Usuario', render: (p) => `<strong>${esc(p.nombre ?? '—')}</strong><div class="texto-suave">${esc(p.email)}</div>` },
-        { titulo: 'Rol', render: (p) => esc(etiqueta(p.rol)) },
+        { titulo: 'Rol', render: (p) => (p.protegido ? `${esc(etiqueta(p.rol))} <span class="badge badge-info" title="Nadie más puede eliminarlo ni modificarlo">Superadmin</span>` : esc(etiqueta(p.rol))) },
         { titulo: 'Empleado vinculado', render: (p) => esc(p.empleado_id ? nombreCompleto(emps[p.empleado_id]) : '—') },
         { titulo: 'Alta', render: (p) => fecha(p.created_at) },
         { titulo: 'Estado', render: (p) => (p.activo ? badge('activo') : badge('baja', 'Inactivo')) },
         {
           titulo: '',
           clase: 'derecha',
-          render: (p) => `<div class="acciones" style="justify-content:flex-end">
+          // Un superadministrador (protegido) solo puede editarse a sí mismo y nadie puede eliminarlo
+          render: (p) => (p.protegido && p.id !== yo.id
+            ? '<span class="texto-suave">Protegido</span>'
+            : `<div class="acciones" style="justify-content:flex-end">
             <button type="button" class="pequeno" data-editar="${p.id}">Editar</button>
-            ${p.id === yo.id ? '' : `<button type="button" class="pequeno peligro" data-eliminar="${p.id}">Eliminar</button>`}</div>`,
+            ${p.id === yo.id || p.protegido ? '' : `<button type="button" class="pequeno peligro" data-eliminar="${p.id}">Eliminar</button>`}</div>`),
         },
       ],
       perfiles,
