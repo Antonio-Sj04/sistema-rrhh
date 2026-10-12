@@ -2,7 +2,7 @@ import { obtenerSesion, tieneRol } from '../auth.js';
 import { TIPOS_AUSENCIA, camposEmpleado, cargarCatalogos } from '../catalogos.js';
 import { recargarVista } from '../router.js';
 import { botonArchivo, sublista } from '../sublista.js';
-import { eliminarArchivo, empresa, ok, subirArchivo } from '../api.js';
+import { eliminarArchivo, empresa, ok, subirConRegistro } from '../api.js';
 import { TIPOS_CONSTANCIA, abrirConstancia } from '../constancias.js';
 import { abrirBaja, imprimirContenido, liquidacionHTML } from '../liquidacion.js';
 import {
@@ -184,15 +184,16 @@ export async function render(el, { id }) {
               opciones: [['dpi', 'DPI'], ['contrato', 'Contrato firmado'], ['titulo', 'Título académico'], ['antecedentes', 'Antecedentes'], ['igss', 'Carné IGSS'], ['constancia', 'Constancia'], ['otro', 'Otro']],
             },
             { nombre: 'nombre', etiqueta: 'Descripción', requerido: true },
-            { nombre: 'archivo', etiqueta: 'Archivo (PDF o imagen, máx. 10 MB)', tipo: 'file', requerido: true, completo: true },
+            { nombre: 'archivo', etiqueta: 'Archivo (PDF o imagen, máx. 5 MB)', tipo: 'file', requerido: true, completo: true },
           ],
           guardar: async (datos, form) => {
-            const ruta = await subirArchivo('documentos', id, form.archivo.files[0]);
-            await ok(empresa('documentos_empleado').insert({ ...datos, empleado_id: id, ruta }));
+            await subirConRegistro('documentos', id, form.archivo.files[0], (ruta) =>
+              ok(empresa('documentos_empleado').insert({ ...datos, empleado_id: id, ruta })));
           },
           eliminar: async (d) => {
-            await eliminarArchivo('documentos', d.ruta);
+            // Primero el registro: si algo falla después, no queda un registro apuntando a un archivo inexistente
             await ok(empresa('documentos_empleado').delete().eq('id', d.id));
+            await eliminarArchivo('documentos', d.ruta);
           },
         }),
     },

@@ -2,7 +2,7 @@ import { tieneRol } from '../auth.js';
 import { ETAPAS } from '../catalogos.js';
 import { navegar, recargarVista } from '../router.js';
 import { botonArchivo, sublista } from '../sublista.js';
-import { eliminarArchivo, eliminarCarpeta, empresa, ok, reclutamiento, subirArchivo } from '../api.js';
+import { eliminarArchivo, eliminarCarpeta, empresa, ok, reclutamiento, subirConRegistro } from '../api.js';
 import {
   abrirFormulario, badge, colorAvatar, confirmar, esc, estrellas, etiqueta, fecha, hoy, iniciales, moneda, montarPestanas,
   mostrarError, nombreCompleto, opciones, toast,
@@ -101,12 +101,12 @@ export async function render(el, { id }) {
           ],
           guardar: async (datos, form) => {
             const archivo = form.documento.files[0];
-            const documento_ruta = archivo ? await subirArchivo('cvs', `${id}/antecedentes`, archivo) : null;
-            await insertar('antecedentes')({ ...datos, documento_ruta });
+            if (!archivo) return insertar('antecedentes')({ ...datos, documento_ruta: null });
+            await subirConRegistro('cvs', `${id}/antecedentes`, archivo, (documento_ruta) => insertar('antecedentes')({ ...datos, documento_ruta }));
           },
           eliminar: async (a) => {
-            if (a.documento_ruta) await eliminarArchivo('cvs', a.documento_ruta);
             await borrar('antecedentes')(a);
+            if (a.documento_ruta) await eliminarArchivo('cvs', a.documento_ruta);
           },
           vacio: 'Sin antecedentes registrados.',
         }),
@@ -212,11 +212,12 @@ export async function render(el, { id }) {
     abrirFormulario({
       titulo: 'Subir currículum',
       textoGuardar: 'Subir',
-      campos: [{ nombre: 'cv', etiqueta: 'Archivo PDF (máx. 10 MB)', tipo: 'file', acepta: '.pdf', requerido: true, completo: true }],
+      campos: [{ nombre: 'cv', etiqueta: 'Archivo PDF (máx. 5 MB)', tipo: 'file', acepta: '.pdf', requerido: true, completo: true }],
       alGuardar: async (_, form) => {
-        const ruta = await subirArchivo('cvs', id, form.cv.files[0]);
-        await ok(reclutamiento('postulantes').update({ cv_ruta: ruta }).eq('id', id));
-        if (p.cv_ruta) await eliminarArchivo('cvs', p.cv_ruta);
+        await subirConRegistro('cvs', id, form.cv.files[0], (ruta) =>
+          ok(reclutamiento('postulantes').update({ cv_ruta: ruta }).eq('id', id)));
+        // El CV anterior se borra solo cuando el nuevo ya quedó registrado
+        if (p.cv_ruta) await eliminarArchivo('cvs', p.cv_ruta).catch(() => {});
         toast('CV actualizado.');
         recargarVista();
       },
@@ -230,8 +231,8 @@ export async function render(el, { id }) {
       : 'Se eliminarán todos sus datos, CV y antecedentes. Esta acción no se puede deshacer. ¿Continuar?';
     if (!(await confirmar(aviso, { textoAceptar: 'Eliminar', peligro: true }))) return;
     try {
-      await eliminarCarpeta('cvs', id); // CV y antecedentes del postulante
       await ok(reclutamiento('postulantes').delete().eq('id', id));
+      await eliminarCarpeta('cvs', id).catch(() => {}); // CV y antecedentes del postulante
       toast('Postulante eliminado.');
       navegar('/postulantes');
     } catch (error) {
