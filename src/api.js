@@ -232,6 +232,21 @@ export async function subirArchivo(bucket, carpeta, archivo) {
   return (await api(`/archivos/${bucket}`, { metodo: 'POST', formulario })).ruta;
 }
 
+/**
+ * Integridad archivo ↔ registro: sube el archivo y luego guarda el registro
+ * que lo referencia con guardar(ruta). Si el registro falla, borra el archivo
+ * recién subido para que no quede huérfano en Storage.
+ */
+export async function subirConRegistro(bucket, carpeta, archivo, guardar) {
+  const ruta = await subirArchivo(bucket, carpeta, archivo);
+  try {
+    return await guardar(ruta);
+  } catch (error) {
+    await eliminarArchivo(bucket, ruta).catch(() => {});
+    throw error;
+  }
+}
+
 export const eliminarArchivo = (bucket, ruta) => api(`/archivos/${bucket}`, { metodo: 'DELETE', parametros: { ruta } });
 
 export const eliminarCarpeta = (bucket, carpeta) => api(`/archivos/${bucket}`, { metodo: 'DELETE', parametros: { carpeta } });

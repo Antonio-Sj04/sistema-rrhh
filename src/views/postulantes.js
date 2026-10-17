@@ -1,6 +1,6 @@
 import { tieneRol } from '../auth.js';
 import { navegar } from '../router.js';
-import { ok, reclutamiento, subirArchivo } from '../api.js';
+import { ok, reclutamiento, subirConRegistro } from '../api.js';
 import { abrirFormulario, badge, esc, fecha, hoy, moneda, nombreCompleto, opciones, persona, tabla, toast } from '../ui.js';
 
 export const CAMPOS_POSTULANTE = [
@@ -81,15 +81,15 @@ export async function render(el) {
       campos: [
         ...CAMPOS_POSTULANTE,
         { nombre: 'vacante_id', etiqueta: 'Postula a la vacante', tipo: 'select', opciones: opciones(vacantes, (v) => v.titulo) },
-        { nombre: 'cv', etiqueta: 'Currículum (PDF, máx. 10 MB)', tipo: 'file', acepta: '.pdf', completo: true },
+        { nombre: 'cv', etiqueta: 'Currículum (PDF, máx. 5 MB)', tipo: 'file', acepta: '.pdf', completo: true },
       ],
       alGuardar: async ({ vacante_id, ...datos }, form) => {
         if (datos.consentimiento_datos) datos.fecha_consentimiento = hoy();
         const [nuevo] = await ok(reclutamiento('postulantes').insert(datos).select('id'));
         const archivo = form.cv.files[0];
         if (archivo) {
-          const ruta = await subirArchivo('cvs', nuevo.id, archivo);
-          await ok(reclutamiento('postulantes').update({ cv_ruta: ruta }).eq('id', nuevo.id));
+          await subirConRegistro('cvs', nuevo.id, archivo, (ruta) =>
+            ok(reclutamiento('postulantes').update({ cv_ruta: ruta }).eq('id', nuevo.id)));
         }
         if (vacante_id) await ok(reclutamiento('postulaciones').insert({ postulante_id: nuevo.id, vacante_id }));
         toast('Postulante registrado.');
