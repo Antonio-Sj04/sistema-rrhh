@@ -1,4 +1,0 @@
-- [Proyecto Supabase RRHH](proyecto-supabase-rrhh.md) — ref oclvfhrehdkfglqsgckh, qué está configurado y pasos manuales
-- [Sin coautor en commits](sin-coautor-en-commits.md) — el trailer Co-Authored-By bloquea los deploys de Netlify; no agregarlo
-- [Créditos de Netlify](netlify-creditos.md) — cada deploy a main cuesta 15 de 300 créditos/mes; agrupar cambios
-- [Superadmin protegido](superadmin-protegido.md) — perfiles.protegido + trigger; para borrar esa cuenta hay que quitar la marca por SQL

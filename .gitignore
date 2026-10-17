@@ -6,3 +6,8 @@ dist
 .DS_Store
 supabase/.temp
 .claude/settings.local.json
+
+# Notas y configuración del asistente (solo en la máquina local)
+.claude/
+docs/contexto-claude/
+CONTINUAR.md
