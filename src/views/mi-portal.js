@@ -15,7 +15,7 @@ export async function render(el) {
     return;
   }
   const id = perfil.empleado_id;
-  const emp = await ok(empresa('empleados').select('*, puesto:puestos(nombre), departamento:departamentos(nombre)').eq('id', id).single());
+  const emp = await ok(empresa('empleados').select('*, puesto:puestos(nombre), departamento:departamentos!empleados_departamento_id_fkey(nombre)').eq('id', id).single());
 
   el.innerHTML = `
     <div class="encabezado">
